@@ -46,6 +46,7 @@ function metadataToTrack(meta) {
     id: meta.spotifyId || meta.videoId || `track-${Date.now()}`,
     title: meta.title ?? '',
     artist: toArtistString(meta.artist),
+    artistId: meta.artistId ?? null,
     artistImage: meta.thumbnail ?? null,
     previewUrl: meta.previewUrl ?? null,
     spotifyId: meta.spotifyId ?? null,

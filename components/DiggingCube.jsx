@@ -1,14 +1,15 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { Html, CameraControls, Billboard, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import { mapTrackToPosition } from '@/utils/mapTrackToPosition'
-import { Play, X, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import DiggingNode, { NODE_RADIUS } from './DiggingNode'
+import ArtistCard from './ArtistCard'
 
 const CUBE_SIZE = 6
-const NODE_RADIUS = 0.15
 const CLUSTER_OFFSET = 0.8
 
 const CAMERA_PRESETS = {
@@ -35,122 +36,6 @@ function positionFromFeatures(features, parentPos = [0, 0, 0], index = 0) {
   ]
 }
 
-function TrackNode({ track, isHovered, isSelected, onClick, onPointerOver, onPointerOut }) {
-  const meshRef = useRef()
-  const scale = isHovered ? 1.5 : 1
-  const color = isHovered ? '#00ffff' : '#a78bfa'
-
-  useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.15)
-    }
-  })
-
-  const pos = Array.isArray(track.position) ? track.position : [0, 0, 0]
-
-  return (
-    <group position={pos}>
-      <mesh
-        ref={meshRef}
-        onClick={(e) => { e.stopPropagation(); onClick(track) }}
-        onPointerOver={(e) => { e.stopPropagation(); onPointerOver(track) }}
-        onPointerOut={(e) => { e.stopPropagation(); onPointerOut() }}
-      >
-        <sphereGeometry args={[NODE_RADIUS, 16, 16]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={isHovered ? 0.8 : 0.4}
-        />
-      </mesh>
-      {isSelected && (
-        <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
-          <Html
-            transform
-            position={[0, NODE_RADIUS + 0.3, 0]}
-            center
-            style={{ pointerEvents: 'auto' }}
-          >
-            <TrackDetailCard track={track} onClose={() => onClick(null)} />
-          </Html>
-        </Billboard>
-      )}
-    </group>
-  )
-}
-
-function TrackDetailCard({ track, onClose }) {
-  const [playing, setPlaying] = useState(null)
-  const audioRef = useRef(null)
-
-  const handlePlay = (url) => {
-    if (!url) return
-    if (playing === url && audioRef.current) {
-      audioRef.current.pause()
-      setPlaying(null)
-      return
-    }
-    if (audioRef.current) audioRef.current.pause()
-    const audio = new Audio(url)
-    audioRef.current = audio
-    audio.play()
-    setPlaying(url)
-    audio.onended = () => setPlaying(null)
-  }
-
-  const topTracks = track.topTracks ?? []
-
-  return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="relative bg-white rounded-lg shadow-xl border border-gray-200 min-w-[220px] overflow-hidden"
-      style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.15)' }}
-    >
-      <div
-        className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white"
-      />
-      <div className="p-4 pt-5">
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 text-gray-400"
-          aria-label="Close"
-        >
-          <X className="w-4 h-4" />
-        </button>
-        <div className="flex items-center gap-3 mb-3">
-          <img
-            src={track.artistImage || `https://i.pravatar.cc/80?u=${track.id}`}
-            alt={typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? '')}
-            className="w-12 h-12 rounded-full object-cover"
-          />
-          <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? '')}</p>
-            <p className="text-sm text-gray-500 truncate">{track.title}</p>
-          </div>
-        </div>
-        {topTracks.length > 0 && (
-          <>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Top Tracks</p>
-            <ul className="space-y-1.5">
-              {topTracks.map((t, i) => (
-                <li key={i} className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-gray-700 truncate flex-1">{t.name}</span>
-                  <button
-                    onClick={() => handlePlay(t.preview)}
-                    disabled={!t.preview}
-                    className={`p-1.5 rounded-full ${t.preview ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300'}`}
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
 
 function CameraPresetController({ preset, controlsRef }) {
   useEffect(() => {
@@ -196,17 +81,33 @@ function Scene({
         )
       })}
 
-      {nodes.map((track) => (
-        <TrackNode
-          key={track.id}
-          track={track}
-          isHovered={hoveredTrack?.id === track.id}
-          isSelected={selectedTrack?.id === track.id}
-          onClick={onSelectTrack}
-          onPointerOver={onHover}
-          onPointerOut={onUnhover}
-        />
-      ))}
+      {nodes.map((track) => {
+        const pos = Array.isArray(track.position) ? track.position : [0, 0, 0]
+        return (
+          <group key={track.id} position={pos}>
+            <DiggingNode
+              track={track}
+              isHovered={hoveredTrack?.id === track.id}
+              isSelected={selectedTrack?.id === track.id}
+              onClick={onSelectTrack}
+              onPointerOver={onHover}
+              onPointerOut={onUnhover}
+            />
+            {selectedTrack?.id === track.id && (
+              <Billboard follow lockX={false} lockY={false} lockZ={false}>
+                <Html
+                  transform
+                  position={[0, NODE_RADIUS + 0.3, 0]}
+                  center
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <ArtistCard track={track} onClose={() => onSelectTrack(null)} />
+                </Html>
+              </Billboard>
+            )}
+          </group>
+        )
+      })}
     </>
   )
 }
@@ -253,6 +154,7 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
           id: t.id,
           title: t.title,
           artist: t.artist,
+          artistId: t.artistId,
           artistImage: t.image,
           previewUrl: t.previewUrl,
           spotifyId: t.id,

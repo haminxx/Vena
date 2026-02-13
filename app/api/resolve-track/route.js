@@ -117,6 +117,7 @@ export async function POST(request) {
     }
 
     const spotifyId = spotifyTrack.id
+    const artistId = spotifyTrack.artists?.[0]?.id ?? null
     const previewUrl = spotifyTrack.preview_url ?? null
 
     // 4. Fetch audio-features (for 3D positioning)
@@ -147,6 +148,7 @@ export async function POST(request) {
       videoId,
       thumbnail: first.thumbnail ?? first.thumbnails?.[0]?.url ?? null,
       spotifyId,
+      artistId,
       previewUrl,
       audioFeatures,
       related: (ytResults.slice(1, 6) ?? []).map((r) => {
