@@ -139,8 +139,9 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
       const parentPos = parentNode?.position ?? [0, 0, 0]
       const newNodes = []
       const newLinks = []
-      for (let i = 0; i < (data.tracks ?? []).length; i++) {
-        const t = data.tracks[i]
+      const tracks = (data.tracks ?? []).slice(0, 5)
+      for (let i = 0; i < tracks.length; i++) {
+        const t = tracks[i]
         const existing = nodes.find((n) => n.id === t.id)
         if (existing) continue
         const pos = t.features
@@ -150,6 +151,11 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
               parentPos[1] + (Math.random() - 0.5) * CLUSTER_OFFSET * 2,
               parentPos[2] + (Math.random() - 0.5) * CLUSTER_OFFSET * 2,
             ]
+        const newPos = [
+          parentPos[0] + (Math.random() - 0.5) * 2,
+          parentPos[1] + (Math.random() - 0.5) * 2,
+          parentPos[2] + (Math.random() - 0.5) * 2,
+        ]
         newNodes.push({
           id: t.id,
           title: t.title,
@@ -159,11 +165,11 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
           previewUrl: t.previewUrl,
           spotifyId: t.id,
           audioFeatures: t.features,
-          position: pos,
+          position: newPos,
           parentId: track.id,
           topTracks: [],
         })
-        newLinks.push({ from: parentPos, to: pos })
+        newLinks.push({ from: parentPos, to: newPos })
       }
       setNodes((prev) => [...prev, ...newNodes])
       setLinks((prev) => [...prev, ...newLinks])

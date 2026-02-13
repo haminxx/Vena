@@ -1,21 +1,39 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Play, X } from 'lucide-react'
+
+const PREVIEW_AUDIO_ID = 'preview-audio'
 
 /**
  * Artist Post Card - glassmorphism style, appears when a node is clicked.
- * Shows artist avatar, name, genre chips, and Popular Tracks with audio preview.
+ * Uses HTML5 <audio> element to bypass WebGL event capturing (autoplay trap).
  */
 export default function ArtistCard({ track, onClose }) {
   const [playingTrackUrl, setPlayingTrackUrl] = useState(null)
   const [genres, setGenres] = useState([])
   const [topTracks, setTopTracks] = useState([])
   const [loading, setLoading] = useState(false)
-  const audioRef = useRef(null)
 
   const artistName = typeof track?.artist === 'string' ? track.artist : (track?.artist?.name ?? '')
   const avatarUrl = track?.artistImage ?? track?.image ?? `https://i.pravatar.cc/80?u=${track?.id}`
+
+  // Reset: stop any playing audio when opening a new card
+  useEffect(() => {
+    const el = document.getElementById(PREVIEW_AUDIO_ID)
+    if (el) {
+      el.pause()
+      el.src = ''
+    }
+    setPlayingTrackUrl(null)
+    return () => {
+      const el = document.getElementById(PREVIEW_AUDIO_ID)
+      if (el) {
+        el.pause()
+        el.src = ''
+      }
+    }
+  }, [track?.id])
 
   useEffect(() => {
     const artistId = track?.artistId
@@ -40,20 +58,25 @@ export default function ArtistCard({ track, onClose }) {
 
   const handlePlayTrack = (url) => {
     if (!url) return
-    if (playingTrackUrl === url && audioRef.current) {
-      audioRef.current.pause()
+    const el = document.getElementById(PREVIEW_AUDIO_ID)
+    if (!el) return
+    if (playingTrackUrl === url) {
+      el.pause()
       setPlayingTrackUrl(null)
       return
     }
-    if (audioRef.current) {
-      audioRef.current.pause()
-    }
-    const audio = new Audio(url)
-    audioRef.current = audio
-    audio.play()
+    el.src = url
+    el.play()
     setPlayingTrackUrl(url)
-    audio.onended = () => setPlayingTrackUrl(null)
   }
+
+  useEffect(() => {
+    const el = document.getElementById(PREVIEW_AUDIO_ID)
+    if (!el) return
+    const onEnded = () => setPlayingTrackUrl(null)
+    el.addEventListener('ended', onEnded)
+    return () => el.removeEventListener('ended', onEnded)
+  }, [])
 
   const displayTracks = topTracks.length > 0 ? topTracks : (track?.topTracks ?? []).slice(0, 5).map((t) => ({
     id: t.id ?? t.name,
@@ -66,6 +89,7 @@ export default function ArtistCard({ track, onClose }) {
       onClick={(e) => e.stopPropagation()}
       className="relative w-[300px] bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 overflow-hidden"
     >
+      <audio id={PREVIEW_AUDIO_ID} src={playingTrackUrl ?? ''} />
       <div
         className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white/90"
       />
