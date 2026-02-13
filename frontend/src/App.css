@@ -1,8 +1,4 @@
 /* Chrome-style trapezoidal tab shape */
-.chrome-tab {
+.chrome-tab-active {
   clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 10px 100%);
-}
-
-.chrome-tab-inactive {
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 100%, 8px 100%);
 }
