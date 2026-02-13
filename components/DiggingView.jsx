@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useDebounce } from '@/hooks/useDebounce'
-import { Search, TrendingUp } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { TrendingUp } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { parseSearchMetadata } from '@/utils/parseSearchMetadata'
+import OmniSearch from './OmniSearch'
 
 const DiggingCube = dynamic(() => import('./DiggingCube'), {
   ssr: false,
@@ -35,15 +35,15 @@ function addRecentSearch(item) {
 }
 
 function metadataToTrack(meta) {
-  if (!meta) return null
+  if (!meta || typeof meta !== 'object') return null
   return {
     id: meta.spotifyId || meta.videoId || `track-${Date.now()}`,
-    title: meta.title,
-    artist: meta.artist,
-    artistImage: meta.thumbnail,
-    previewUrl: meta.previewUrl,
-    spotifyId: meta.spotifyId,
-    audioFeatures: meta.audioFeatures,
+    title: meta.title ?? '',
+    artist: meta.artist ?? '',
+    artistImage: meta.thumbnail ?? null,
+    previewUrl: meta.previewUrl ?? null,
+    spotifyId: meta.spotifyId ?? null,
+    audioFeatures: meta.audioFeatures ?? null,
   }
 }
 
@@ -54,18 +54,12 @@ export default function DiggingView({
   initialGraphData = null,
 }) {
   const [searchInput, setSearchInput] = useState(initialQuery)
-  const [suggestions, setSuggestions] = useState([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedTrack, setSelectedTrack] = useState(() =>
     initialGraphData ? metadataToTrack(initialGraphData) : null
   )
   const [recentSearches, setRecentSearches] = useState([])
-  const suggestionsRef = useRef(null)
-  const inputRef = useRef(null)
-
-  const debouncedSearch = useDebounce(searchInput, 300)
 
   const is3DActive = !!selectedTrack
 
@@ -104,26 +98,12 @@ export default function DiggingView({
 
   const handleSelectSuggestion = useCallback(
     (item) => {
-      setSearchInput(item.query)
-      setShowSuggestions(false)
-      setSuggestions([])
-      performSearch(item.query)
+      const query = item.query ?? [item.title, item.artist].filter(Boolean).join(' ')
+      setSearchInput(query)
+      performSearch(query)
     },
     [performSearch]
   )
-
-  useEffect(() => {
-    if (!debouncedSearch || debouncedSearch.length < 2) {
-      setSuggestions([])
-      return
-    }
-    const ctrl = new AbortController()
-    fetch(`/api/search-suggestions?q=${encodeURIComponent(debouncedSearch)}`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((d) => setSuggestions(d.results ?? []))
-      .catch(() => setSuggestions([]))
-    return () => ctrl.abort()
-  }, [debouncedSearch])
 
   useEffect(() => {
     setRecentSearches(getRecentSearches())
@@ -134,21 +114,6 @@ export default function DiggingView({
       setSelectedTrack(metadataToTrack(initialGraphData))
     }
   }, [initialGraphData?.spotifyId, initialGraphData?.videoId])
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(e.target) &&
-        inputRef.current &&
-        !inputRef.current.contains(e.target)
-      ) {
-        setShowSuggestions(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   const textClass = dark ? 'text-gray-200' : 'text-gray-800'
   const mutedClass = dark ? 'text-gray-400' : 'text-gray-500'
@@ -172,48 +137,16 @@ export default function DiggingView({
       <h2 className={`text-2xl font-light mb-2 ${textClass}`}>Discover Music</h2>
       <p className={`text-sm mb-8 ${mutedClass}`}>Search by track, artist, or mood (e.g. &quot;Sad Piano&quot;)</p>
 
-      <div className="w-full max-w-xl relative">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            performSearch(searchInput)
-            setShowSuggestions(false)
-          }}
-          className={`flex items-center gap-3 rounded-2xl pl-6 pr-4 py-4 border-2 transition-colors ${bgClass} ${borderClass} focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500`}
-        >
-          <Search className={`w-6 h-6 ${mutedClass}`} />
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value)
-              setShowSuggestions(true)
-            }}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder="Search for a track, artist, or mood..."
-            className={`flex-1 bg-transparent border-none outline-none text-lg min-w-0 ${textClass} placeholder-gray-400`}
-            disabled={loading}
-          />
-        </form>
-
-        {showSuggestions && suggestions.length > 0 && (
-          <div
-            ref={suggestionsRef}
-            className={`absolute top-full left-0 right-0 mt-2 rounded-xl shadow-xl border overflow-hidden z-50 ${dark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}
-          >
-            {suggestions.map((item, i) => (
-              <button
-                key={i}
-                onClick={() => handleSelectSuggestion(item)}
-                className={`w-full text-left px-5 py-3 text-base hover:bg-blue-500/20 transition-colors ${textClass}`}
-              >
-                {item.title}
-                {item.artist ? <span className={mutedClass}> — {item.artist}</span> : ''}
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="w-full max-w-xl">
+        <OmniSearch
+          value={searchInput}
+          onChange={setSearchInput}
+          onSelectSuggestion={handleSelectSuggestion}
+          onSubmit={performSearch}
+          placeholder="Search for a track, artist, or mood..."
+          dark={dark}
+          disabled={loading}
+        />
       </div>
 
       {error && <p className="mt-4 text-red-500 text-sm">{error}</p>}

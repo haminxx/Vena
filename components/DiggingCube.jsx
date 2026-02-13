@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState, useCallback, useMemo } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html, OrbitControls, Billboard, Line } from '@react-three/drei'
+import { Html, CameraControls, Billboard, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import { mapTrackToPosition } from '@/utils/mapTrackToPosition'
 import { Play, X, ArrowLeft } from 'lucide-react'
@@ -152,27 +152,20 @@ function TrackDetailCard({ track, onClose }) {
   )
 }
 
-function CameraPresetController({ preset }) {
-  const { camera } = useThree()
-  const prevPreset = useRef(preset)
-
-  if (prevPreset.current !== preset) {
-    prevPreset.current = preset
-    const { position, target } = CAMERA_PRESETS[preset]
-    camera.position.set(...position)
-    camera.lookAt(...target)
-  }
+function CameraPresetController({ preset, controlsRef }) {
+  useEffect(() => {
+    const controls = controlsRef?.current
+    if (!controls) return
+    const { position, target } = CAMERA_PRESETS[preset] ?? CAMERA_PRESETS.diagonal
+    // enableTransition: true = smooth cinematic pan instead of instant snap
+    controls.setLookAt(
+      position[0], position[1], position[2],
+      target[0], target[1], target[2],
+      true
+    )
+  }, [preset, controlsRef])
 
   return null
-}
-
-function WireframeCube({ size }) {
-  const geo = useMemo(() => new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size)), [size])
-  return (
-    <lineSegments geometry={geo}>
-      <lineBasicMaterial color="#333" />
-    </lineSegments>
-  )
 }
 
 function Scene({
@@ -190,16 +183,18 @@ function Scene({
       <pointLight position={[8, 8, 8]} intensity={1} />
       <pointLight position={[-8, -8, 8]} intensity={0.5} />
 
-      <WireframeCube size={CUBE_SIZE} />
-
-      {links.map((link, i) => (
-        <Line
-          key={i}
-          points={[link.from, link.to]}
-          color="#555"
-          lineWidth={1}
-        />
-      ))}
+      {links.map((link, i) => {
+        const from = Array.isArray(link.from) ? link.from : [0, 0, 0]
+        const to = Array.isArray(link.to) ? link.to : [0, 0, 0]
+        return (
+          <Line
+            key={i}
+            points={[from, to]}
+            color="#555"
+            lineWidth={1}
+          />
+        )
+      })}
 
       {nodes.map((track) => (
         <TrackNode
@@ -229,6 +224,7 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
   const [hoveredTrack, setHoveredTrack] = useState(null)
   const [cameraPreset, setCameraPreset] = useState('diagonal')
   const [loadingSimilar, setLoadingSimilar] = useState(false)
+  const controlsRef = useRef(null)
 
   const fetchSimilar = useCallback(async (track) => {
     const seed = track.spotifyId || track.id
@@ -316,13 +312,14 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
         onPointerMissed={() => setSelectedTrack(null)}
       >
         <color attach="background" args={[dark ? '#0a0a0a' : '#0f0f0f']} />
-        <CameraPresetController preset={cameraPreset} />
-        <OrbitControls
-          enableDamping
-          dampingFactor={0.05}
+        <CameraControls
+          ref={controlsRef}
+          makeDefault
           minDistance={2}
           maxDistance={20}
+          smoothTime={0.5}
         />
+        <CameraPresetController preset={cameraPreset} controlsRef={controlsRef} />
         <Scene
           nodes={nodes}
           links={links}
