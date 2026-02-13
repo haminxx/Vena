@@ -10,7 +10,7 @@ import YTMusic from 'ytmusic-api'
  */
 export async function POST(request) {
   try {
-    const { search } = await request.json()
+    const { search, filters } = await request.json()
     if (!search || typeof search !== 'string') {
       return NextResponse.json(
         { error: 'Missing or invalid search string' },
@@ -109,7 +109,15 @@ export async function POST(request) {
     const spotifyId = spotifyTrack.id
     const previewUrl = spotifyTrack.preview_url ?? null
 
-    // 4. Fetch Spotify audio-analysis
+    // 4. Fetch audio-features (for 3D positioning)
+    let audioFeatures = null
+    const featuresRes = await fetch(
+      `https://api.spotify.com/v1/audio-features/${spotifyId}`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    )
+    if (featuresRes.ok) audioFeatures = await featuresRes.json()
+
+    // 5. Fetch Spotify audio-analysis
     const analysisRes = await fetch(
       `https://api.spotify.com/v1/audio-analysis/${spotifyId}`,
       {
@@ -122,12 +130,15 @@ export async function POST(request) {
       spotifyAnalysis = await analysisRes.json()
     }
 
-    // 5. Build response
+    // 6. Build response
     const youtube_metadata = {
       title,
       artist,
       videoId,
       thumbnail: first.thumbnail ?? first.thumbnails?.[0]?.url ?? null,
+      spotifyId,
+      previewUrl,
+      audioFeatures,
       related: (ytResults.slice(1, 6) ?? []).map((r) => ({
         videoId: r.videoId ?? r.id,
         title: r.title ?? r.name,
@@ -140,6 +151,8 @@ export async function POST(request) {
       youtube_metadata,
       spotify_preview_url: previewUrl,
       spotify_analysis: spotifyAnalysis,
+      spotify_id: spotifyId,
+      audio_features: audioFeatures,
     })
   } catch (err) {
     console.error('[resolve-track]', err)

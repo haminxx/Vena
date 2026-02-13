@@ -1,167 +1,245 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useDebounce } from '@/hooks/useDebounce'
+import { Search, TrendingUp } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { parseSearchMetadata } from '@/utils/parseSearchMetadata'
 
-const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false })
+const DiggingCube = dynamic(() => import('./DiggingCube'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center text-gray-500 min-h-[300px]">
+      Loading 3D...
+    </div>
+  ),
+})
 
-const CENTER_RADIUS = 40
-const RELATED_RADIUS = 28
+const RECENT_KEY = 'digbrowser-recent-searches'
 
-function buildGraphData(metadata) {
-  if (!metadata) return { nodes: [], links: [] }
-
-  const center = {
-    id: 'center',
-    title: metadata.title,
-    artist: metadata.artist,
-    thumbnail: metadata.thumbnail ?? (metadata.videoId ? `https://img.youtube.com/vi/${metadata.videoId}/mqdefault.jpg` : null),
-    isCenter: true,
+function getRecentSearches() {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(RECENT_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
   }
-
-  const related = (metadata.related ?? []).map((r, i) => ({
-    id: `related-${i}`,
-    title: r.title ?? 'Unknown',
-    artist: r.artist ?? '',
-    thumbnail: r.thumbnail ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
-    videoId: r.videoId,
-    isCenter: false,
-  }))
-
-  const nodes = [center, ...related]
-  const links = related.map((_, i) => ({
-    source: 'center',
-    target: `related-${i}`,
-  }))
-
-  return { nodes, links }
 }
 
-export default function DiggingView({ graphData, onSearch, dark = false }) {
-  const fgRef = useRef()
-  const containerRef = useRef()
-  const [imgCache, setImgCache] = useState({})
-  const [dimensions, setDimensions] = useState({ width: 800, height: 400 })
+function addRecentSearch(item) {
+  const recent = getRecentSearches()
+  const filtered = recent.filter((r) => r.query !== item.query)
+  const updated = [item, ...filtered].slice(0, 10)
+  localStorage.setItem(RECENT_KEY, JSON.stringify(updated))
+}
 
-  const { nodes, links } = useMemo(() => buildGraphData(graphData), [graphData])
+function metadataToTrack(meta) {
+  if (!meta) return null
+  return {
+    id: meta.spotifyId || meta.videoId || `track-${Date.now()}`,
+    title: meta.title,
+    artist: meta.artist,
+    artistImage: meta.thumbnail,
+    previewUrl: meta.previewUrl,
+    spotifyId: meta.spotifyId,
+    audioFeatures: meta.audioFeatures,
+  }
+}
 
-  // Preload images when graph data changes
-  useEffect(() => {
-    if (!graphData) return
-    const cache = {}
-    const toLoad = [graphData, ...(graphData.related ?? [])]
-    let loaded = 0
-    const total = toLoad.filter((n) => n.thumbnail || n.videoId).length
-
-    toLoad.forEach((node, idx) => {
-      const url = node.thumbnail ?? (node.videoId ? `https://img.youtube.com/vi/${node.videoId}/mqdefault.jpg` : null)
-      if (!url) return
-      const id = idx === 0 ? 'center' : `related-${idx - 1}`
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => {
-        cache[id] = img
-        loaded++
-        if (loaded >= total) setImgCache((c) => ({ ...c, ...cache }))
-      }
-      img.onerror = () => {
-        loaded++
-        if (loaded >= total) setImgCache((c) => ({ ...c, ...cache }))
-      }
-      img.src = url
-    })
-
-    if (total === 0) setImgCache({})
-  }, [graphData])
-
-  const nodeCanvasObject = useCallback(
-    (node, ctx, globalScale) => {
-      const radius = node.isCenter ? CENTER_RADIUS : RELATED_RADIUS
-      const img = imgCache[node.id]
-
-      ctx.save()
-
-      // Circular clip
-      ctx.beginPath()
-      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
-      ctx.closePath()
-      ctx.clip()
-
-      if (img && img.complete && img.naturalWidth) {
-        ctx.drawImage(img, node.x - radius, node.y - radius, radius * 2, radius * 2)
-      } else {
-        ctx.fillStyle = '#e5e7eb'
-        ctx.fillRect(node.x - radius, node.y - radius, radius * 2, radius * 2)
-      }
-
-      ctx.restore()
-
-      // Border
-      ctx.beginPath()
-      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
-      ctx.strokeStyle = node.isCenter ? '#3b82f6' : '#9ca3af'
-      ctx.lineWidth = node.isCenter ? 2 : 1
-      ctx.stroke()
-    },
-    [imgCache]
+export default function DiggingView({
+  onSelectTrack,
+  dark = false,
+  initialQuery = '',
+  initialGraphData = null,
+}) {
+  const [searchInput, setSearchInput] = useState(initialQuery)
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [selectedTrack, setSelectedTrack] = useState(() =>
+    initialGraphData ? metadataToTrack(initialGraphData) : null
   )
+  const [recentSearches, setRecentSearches] = useState([])
+  const suggestionsRef = useRef(null)
+  const inputRef = useRef(null)
 
-  const handleNodeClick = useCallback(
-    (node) => {
-      if (node.isCenter) return
-      const query = [node.title, node.artist].filter(Boolean).join(' ')
-      if (query && onSearch) onSearch(query)
-    },
-    [onSearch]
-  )
+  const debouncedSearch = useDebounce(searchInput, 300)
 
-  useEffect(() => {
-    if (fgRef.current && nodes.length > 0) {
-      fgRef.current.zoomToFit(400, 40)
+  const is3DActive = !!selectedTrack
+
+  const performSearch = useCallback(async (query) => {
+    const q = (typeof query === 'string' ? query : searchInput).trim()
+    if (!q) return
+    setLoading(true)
+    setError(null)
+    try {
+      const { cleanQuery, filters } = parseSearchMetadata(q)
+      const searchPayload = cleanQuery || q
+      const res = await fetch('/api/resolve-track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ search: searchPayload, filters: Object.keys(filters).length ? filters : undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Search failed')
+      const meta = data.youtube_metadata
+      const track = metadataToTrack({
+        ...meta,
+        previewUrl: data.spotify_preview_url,
+        audioFeatures: data.audio_features || meta.audioFeatures,
+      })
+      addRecentSearch({ query: [meta.title, meta.artist].filter(Boolean).join(' '), ...track })
+      setRecentSearches(getRecentSearches())
+      setSelectedTrack(track)
+      setSearchInput([meta.title, meta.artist].filter(Boolean).join(' '))
+      onSelectTrack?.(track)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-  }, [nodes.length, graphData])
+  }, [searchInput, onSelectTrack])
+
+  const handleSelectSuggestion = useCallback(
+    (item) => {
+      setSearchInput(item.query)
+      setShowSuggestions(false)
+      setSuggestions([])
+      performSearch(item.query)
+    },
+    [performSearch]
+  )
 
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const ro = new ResizeObserver((entries) => {
-      const { width, height } = entries[0]?.contentRect ?? {}
-      if (width && height) setDimensions({ width, height })
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
+    if (!debouncedSearch || debouncedSearch.length < 2) {
+      setSuggestions([])
+      return
+    }
+    const ctrl = new AbortController()
+    fetch(`/api/search-suggestions?q=${encodeURIComponent(debouncedSearch)}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((d) => setSuggestions(d.results ?? []))
+      .catch(() => setSuggestions([]))
+    return () => ctrl.abort()
+  }, [debouncedSearch])
+
+  useEffect(() => {
+    setRecentSearches(getRecentSearches())
   }, [])
 
-  if (!graphData) {
+  useEffect(() => {
+    if (initialGraphData?.spotifyId || initialGraphData?.videoId) {
+      setSelectedTrack(metadataToTrack(initialGraphData))
+    }
+  }, [initialGraphData?.spotifyId, initialGraphData?.videoId])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const textClass = dark ? 'text-gray-200' : 'text-gray-800'
+  const mutedClass = dark ? 'text-gray-400' : 'text-gray-500'
+  const bgClass = dark ? 'bg-gray-800' : 'bg-gray-50'
+  const borderClass = dark ? 'border-gray-600' : 'border-gray-200'
+
+  if (is3DActive) {
     return (
-      <div className={`flex-1 flex items-center justify-center min-h-[300px] ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-        <p>Search for a track in the Omnibox above to explore related songs.</p>
+      <div className="absolute inset-0 w-full h-full flex flex-col">
+        <DiggingCube
+          dark={dark}
+          initialTrack={selectedTrack}
+          onBack={() => setSelectedTrack(null)}
+        />
       </div>
     )
   }
 
   return (
-    <div ref={containerRef} className="w-full flex-1 min-h-[300px]">
-      <ForceGraph2D
-        width={dimensions.width}
-        height={dimensions.height}
-        ref={fgRef}
-        graphData={{ nodes, links }}
-        nodeCanvasObject={nodeCanvasObject}
-        nodeCanvasObjectMode="replace"
-        nodePointerAreaPaint={(node, color, ctx) => {
-          const radius = node.isCenter ? CENTER_RADIUS : RELATED_RADIUS
-          ctx.fillStyle = color
-          ctx.beginPath()
-          ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
-          ctx.fill()
-        }}
-        onNodeClick={handleNodeClick}
-        linkColor={dark ? '#4b5563' : '#d1d5db'}
-        linkWidth={1}
-        backgroundColor={dark ? '#0a0a0a' : '#ffffff'}
-        nodeLabel={(node) => `${node.title}${node.artist ? ` - ${node.artist}` : ''}`}
-      />
+    <div className={`flex-1 flex flex-col items-center justify-center p-8 ${dark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <h2 className={`text-2xl font-light mb-2 ${textClass}`}>Discover Music</h2>
+      <p className={`text-sm mb-8 ${mutedClass}`}>Search by track, artist, or mood (e.g. &quot;Sad Piano&quot;)</p>
+
+      <div className="w-full max-w-xl relative">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            performSearch(searchInput)
+            setShowSuggestions(false)
+          }}
+          className={`flex items-center gap-3 rounded-2xl pl-6 pr-4 py-4 border-2 transition-colors ${bgClass} ${borderClass} focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500`}
+        >
+          <Search className={`w-6 h-6 ${mutedClass}`} />
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value)
+              setShowSuggestions(true)
+            }}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            placeholder="Search for a track, artist, or mood..."
+            className={`flex-1 bg-transparent border-none outline-none text-lg min-w-0 ${textClass} placeholder-gray-400`}
+            disabled={loading}
+          />
+        </form>
+
+        {showSuggestions && suggestions.length > 0 && (
+          <div
+            ref={suggestionsRef}
+            className={`absolute top-full left-0 right-0 mt-2 rounded-xl shadow-xl border overflow-hidden z-50 ${dark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}
+          >
+            {suggestions.map((item, i) => (
+              <button
+                key={i}
+                onClick={() => handleSelectSuggestion(item)}
+                className={`w-full text-left px-5 py-3 text-base hover:bg-blue-500/20 transition-colors ${textClass}`}
+              >
+                {item.title}
+                {item.artist ? <span className={mutedClass}> — {item.artist}</span> : ''}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {error && <p className="mt-4 text-red-500 text-sm">{error}</p>}
+      {loading && <p className={`mt-4 ${mutedClass}`}>Searching...</p>}
+
+      <div className="mt-16 w-full max-w-xl">
+        <h3 className={`flex items-center gap-2 text-sm font-medium ${mutedClass} mb-4`}>
+          <TrendingUp className="w-4 h-4" />
+          Recent
+        </h3>
+        {recentSearches.length === 0 ? (
+          <p className={mutedClass}>Your recent searches will appear here</p>
+        ) : (
+          <div className="space-y-2">
+            {recentSearches.map((item, i) => (
+              <button
+                key={i}
+                onClick={() => handleSelectSuggestion(item)}
+                className={`w-full text-left px-4 py-3 rounded-lg hover:bg-gray-200/50 transition-colors ${textClass}`}
+              >
+                {item.query}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

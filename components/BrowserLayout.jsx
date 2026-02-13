@@ -5,12 +5,7 @@ import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette } from 'lucide-react
 import { useBrowserState } from '@/context/BrowserState'
 import { useTabHistory } from '@/hooks/useTabHistory'
 import { useDebounce } from '@/hooks/useDebounce'
-import dynamic from 'next/dynamic'
-
-const DiggingCube = dynamic(() => import('./DiggingCube'), {
-  ssr: false,
-  loading: () => <div className="flex-1 flex items-center justify-center text-gray-500 min-h-[300px]">Loading 3D...</div>,
-})
+import DiggingView from './DiggingView'
 import NewTabPage from './NewTabPage'
 
 const TAB_LABELS = {
@@ -260,10 +255,21 @@ export default function BrowserLayout() {
           />
         )}
         {activeTab?.type === 'digging' && (
-          <div className="flex-1 flex flex-col p-4">
-            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-            {loading && <p className="text-gray-500 text-sm mb-2">Searching...</p>}
-            <DiggingCube dark={isDark} />
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            <DiggingView
+              dark={isDark}
+              initialQuery={currentState?.query}
+              initialGraphData={currentState?.graphData}
+              onSelectTrack={(track) => {
+                if (track) {
+                  const state = {
+                    query: [track.title, track.artist].filter(Boolean).join(' '),
+                    graphData: track,
+                  }
+                  replace(state)
+                }
+              }}
+            />
           </div>
         )}
         {activeTab?.type === 'syncing' && (
