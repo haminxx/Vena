@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette } from 'lucide-react
 import { useBrowserState } from '@/context/BrowserState'
 import { useTabHistory } from '@/hooks/useTabHistory'
 import { useDebounce } from '@/hooks/useDebounce'
-import DiggingView from './DiggingView'
+import DiggingCube from './DiggingCube'
 import NewTabPage from './NewTabPage'
 
 const TAB_LABELS = {
@@ -258,11 +258,7 @@ export default function BrowserLayout() {
           <div className="flex-1 flex flex-col p-4">
             {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
             {loading && <p className="text-gray-500 text-sm mb-2">Searching...</p>}
-            <DiggingView
-              graphData={currentState?.graphData}
-              onSearch={handleNodeClick}
-              dark={isDark}
-            />
+            <DiggingCube dark={isDark} />
           </div>
         )}
         {activeTab?.type === 'syncing' && (
