@@ -5,7 +5,12 @@ import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette } from 'lucide-react
 import { useBrowserState } from '@/context/BrowserState'
 import { useTabHistory } from '@/hooks/useTabHistory'
 import { useDebounce } from '@/hooks/useDebounce'
-import DiggingCube from './DiggingCube'
+import dynamic from 'next/dynamic'
+
+const DiggingCube = dynamic(() => import('./DiggingCube'), {
+  ssr: false,
+  loading: () => <div className="flex-1 flex items-center justify-center text-gray-500 min-h-[300px]">Loading 3D...</div>,
+})
 import NewTabPage from './NewTabPage'
 
 const TAB_LABELS = {

@@ -1,16 +1,17 @@
 'use client'
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const TAB_ID_PREFIX = 'tab-'
+const INITIAL_TAB_ID = 'tab-initial'
 
 function createTabId() {
   return TAB_ID_PREFIX + Date.now() + '-' + Math.random().toString(36).slice(2)
 }
 
-function createNewTab(type = 'new-tab') {
+function createNewTab(type = 'new-tab', id = null) {
   return {
-    id: createTabId(),
+    id: id ?? createTabId(),
     type,
     history: type === 'new-tab' ? [] : [{ query: '', graphData: null }],
     currentIndex: 0,
@@ -20,12 +21,13 @@ function createNewTab(type = 'new-tab') {
 const BrowserStateContext = createContext(null)
 
 export function BrowserStateProvider({ children }) {
-  const [tabs, setTabs] = useState(() => [createNewTab('new-tab')])
-  const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? null)
-  const [theme, setThemeState] = useState(() => {
-    if (typeof window === 'undefined') return 'light'
-    return localStorage.getItem('digbrowser-theme') || 'light'
-  })
+  const [tabs, setTabs] = useState(() => [createNewTab('new-tab', INITIAL_TAB_ID)])
+  const [activeTabId, setActiveTabId] = useState(INITIAL_TAB_ID)
+  const [theme, setThemeState] = useState('light')
+
+  useEffect(() => {
+    setThemeState(localStorage.getItem('digbrowser-theme') || 'light')
+  }, [])
 
   const setTheme = useCallback((value) => {
     setThemeState(value)
