@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { Play, X } from 'lucide-react'
-
-const PREVIEW_AUDIO_ID = 'preview-audio'
+import { useAudioPreview } from '@/hooks/useAudioPreview'
 
 /**
  * Artist Post Card - glassmorphism style, appears when a node is clicked.
- * Uses HTML5 <audio> element to bypass WebGL event capturing (autoplay trap).
+ * Uses useAudioPreview singleton for reliable playback.
+ * Scroll fix: overscroll-contain, onPointerDown stopPropagation.
  */
 export default function ArtistCard({ track, onClose }) {
-  const [playingTrackUrl, setPlayingTrackUrl] = useState(null)
+  const { play, stop, playingUrl } = useAudioPreview()
   const [genres, setGenres] = useState([])
   const [topTracks, setTopTracks] = useState([])
   const [loading, setLoading] = useState(false)
@@ -20,20 +20,9 @@ export default function ArtistCard({ track, onClose }) {
 
   // Reset: stop any playing audio when opening a new card
   useEffect(() => {
-    const el = document.getElementById(PREVIEW_AUDIO_ID)
-    if (el) {
-      el.pause()
-      el.src = ''
-    }
-    setPlayingTrackUrl(null)
-    return () => {
-      const el = document.getElementById(PREVIEW_AUDIO_ID)
-      if (el) {
-        el.pause()
-        el.src = ''
-      }
-    }
-  }, [track?.id])
+    stop()
+    return () => stop()
+  }, [track?.id, stop])
 
   useEffect(() => {
     const artistId = track?.artistId
@@ -56,28 +45,6 @@ export default function ArtistCard({ track, onClose }) {
       .finally(() => setLoading(false))
   }, [track?.artistId])
 
-  const handlePlayTrack = (url) => {
-    if (!url) return
-    const el = document.getElementById(PREVIEW_AUDIO_ID)
-    if (!el) return
-    if (playingTrackUrl === url) {
-      el.pause()
-      setPlayingTrackUrl(null)
-      return
-    }
-    el.src = url
-    el.play()
-    setPlayingTrackUrl(url)
-  }
-
-  useEffect(() => {
-    const el = document.getElementById(PREVIEW_AUDIO_ID)
-    if (!el) return
-    const onEnded = () => setPlayingTrackUrl(null)
-    el.addEventListener('ended', onEnded)
-    return () => el.removeEventListener('ended', onEnded)
-  }, [])
-
   const displayTracks = topTracks.length > 0 ? topTracks : (track?.topTracks ?? []).slice(0, 5).map((t) => ({
     id: t.id ?? t.name,
     name: t.name ?? t.title,
@@ -87,9 +54,9 @@ export default function ArtistCard({ track, onClose }) {
   return (
     <div
       onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       className="relative w-[300px] bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 overflow-hidden"
     >
-      <audio id={PREVIEW_AUDIO_ID} src={playingTrackUrl ?? ''} />
       <div
         className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white/90"
       />
@@ -128,13 +95,13 @@ export default function ArtistCard({ track, onClose }) {
           </div>
         </div>
 
-        {/* Popular Tracks Section */}
+        {/* Popular Tracks Section - scrollable */}
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Popular Tracks
           </p>
           <ul
-            className="space-y-1 max-h-[150px] overflow-y-auto pr-1"
+            className="space-y-1 max-h-[150px] overflow-y-auto overscroll-contain pr-1"
             style={{ scrollbarWidth: 'thin' }}
           >
             {displayTracks.length > 0 ? (
@@ -145,18 +112,18 @@ export default function ArtistCard({ track, onClose }) {
                 >
                   <span className="text-sm text-gray-800 truncate flex-1">{t.name}</span>
                   <button
-                    onClick={() => handlePlayTrack(t.preview)}
+                    onClick={() => play(t.preview)}
                     disabled={!t.preview}
                     className={`p-2 rounded-full shrink-0 transition-colors ${
                       t.preview
-                        ? playingTrackUrl === t.preview
+                        ? playingUrl === t.preview
                           ? 'text-blue-600 bg-blue-100'
                           : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
                         : 'text-gray-300 cursor-not-allowed'
                     }`}
                     aria-label={t.preview ? 'Play' : 'No preview'}
                   >
-                    <Play className={`w-4 h-4 ${playingTrackUrl === t.preview ? 'fill-current' : ''}`} />
+                    <Play className={`w-4 h-4 ${playingUrl === t.preview ? 'fill-current' : ''}`} />
                   </button>
                 </li>
               ))

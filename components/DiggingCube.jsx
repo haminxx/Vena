@@ -99,9 +99,11 @@ function Scene({
                   transform
                   position={[0, NODE_RADIUS + 0.3, 0]}
                   center
-                  style={{ pointerEvents: 'auto' }}
+                  pointerEvents="none"
                 >
-                  <ArtistCard track={track} onClose={() => onSelectTrack(null)} />
+                  <div className="pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
+                    <ArtistCard track={track} onClose={() => onSelectTrack(null)} />
+                  </div>
                 </Html>
               </Billboard>
             )}
