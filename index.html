@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Music Dig & Sync</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Landing: Press F11 to start -->
+  <section id="landing" class="active">
+    <p class="landing-text">Press <kbd>F11</kbd> to start</p>
+  </section>
+
+  <!-- Browser-style UI (shown after F11 fullscreen) -->
+  <main id="browser-ui" class="hidden">
+    <div class="browser-chrome">
+      <div class="search-row">
+        <div class="search-box" data-color="#4a90d9" role="button" tabindex="0">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <span class="search-placeholder">Search or type a URL</span>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="tool-btn" data-color="#e85d04" title="Home">
+          <span class="tool-icon" aria-hidden="true">⌂</span>
+          <span>Home</span>
+        </button>
+        <button type="button" class="tool-btn" data-color="#2d6a4f" title="Category">
+          <span class="tool-icon" aria-hidden="true">☰</span>
+          <span>Category</span>
+        </button>
+        <button type="button" class="tool-btn" data-color="#7b2cbf" title="Library">
+          <span class="tool-icon" aria-hidden="true">📚</span>
+          <span>Library</span>
+        </button>
+        <button type="button" class="tool-btn" data-color="#d62828" title="Favorites">
+          <span class="tool-icon" aria-hidden="true">♥</span>
+          <span>Favorites</span>
+        </button>
+        <button type="button" class="tool-btn" data-color="#006d77" title="Settings">
+          <span class="tool-icon" aria-hidden="true">⚙</span>
+          <span>Settings</span>
+        </button>
+      </div>
+    </div>
+    <div class="content-area">
+      <!-- Placeholder keywords/boxes - you can replace with real content later -->
+      <div class="keyword" data-color="#4a90d9">Search</div>
+      <div class="keyword" data-color="#e85d04">Home</div>
+      <div class="keyword" data-color="#2d6a4f">Category</div>
+      <div class="keyword" data-color="#7b2cbf">Library</div>
+      <div class="keyword" data-color="#d62828">Favorites</div>
+      <div class="keyword" data-color="#006d77">Settings</div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
