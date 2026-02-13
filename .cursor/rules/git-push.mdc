@@ -1,0 +1,14 @@
+---
+description: Push changes to git after making edits
+alwaysApply: true
+---
+
+# Git Push After Edits
+
+After making any code changes from a user prompt:
+
+1. **Stage** all changes: `git add .`
+2. **Commit** with a descriptive message summarizing the changes
+3. **Push** to the remote: `git push origin main` (or the current branch)
+
+Do this by default unless the user explicitly asks not to push, or the project has no git repository.
