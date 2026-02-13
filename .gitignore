@@ -13,7 +13,13 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Local env (if you add tooling later)
+# Local env
 node_modules/
 .env
 .env.local
+
+# Backend
+backend/browser.json
+backend/.env
+backend/__pycache__/
+backend/**/__pycache__/
