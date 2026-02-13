@@ -107,8 +107,8 @@ export function RadialMusicMap({
         .arc<{ startAngle: number; endAngle: number }>()
         .innerRadius(innerRadius)
         .outerRadius(outerRadius)
-        .startAngle(startAngle)
-        .endAngle(endAngle)
+        .startAngle((d) => d.startAngle)
+        .endAngle((d) => d.endAngle)
 
       const segmentG = g
         .append('g')
@@ -126,7 +126,7 @@ export function RadialMusicMap({
 
       segmentG
         .append('path')
-        .attr('d', arc({ startAngle, endAngle }))
+        .attr('d', arc({ startAngle, endAngle }) ?? '')
         .attr('fill', color)
         .attr('fill-opacity', 0.5)
         .attr('stroke', color)
