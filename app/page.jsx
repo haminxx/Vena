@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
-import BrowserChrome from './components/BrowserChrome'
+'use client'
 
-function App() {
+import { useState, useEffect, useCallback } from 'react'
+import BrowserLayout from '@/components/BrowserLayout'
+
+export default function Home() {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const handleFullscreenChange = useCallback(() => {
@@ -34,7 +36,5 @@ function App() {
     )
   }
 
-  return <BrowserChrome />
+  return <BrowserLayout />
 }
-
-export default App
