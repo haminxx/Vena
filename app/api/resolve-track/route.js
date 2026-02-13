@@ -94,7 +94,12 @@ export async function POST(request) {
             artist,
             videoId,
             thumbnail: first.thumbnail ?? first.thumbnails?.[0]?.url,
-            related: ytResults.slice(1, 6),
+            related: (ytResults.slice(1, 6) ?? []).map((r) => ({
+          videoId: r.videoId ?? r.id,
+          title: r.title ?? r.name,
+          artist: r.artist ?? r.artists?.[0]?.name ?? r.author,
+          thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
+        })),
           },
         },
         { status: 404 }
@@ -127,6 +132,7 @@ export async function POST(request) {
         videoId: r.videoId ?? r.id,
         title: r.title ?? r.name,
         artist: r.artist ?? r.artists?.[0]?.name ?? r.author,
+        thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
       })),
     }
 

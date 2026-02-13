@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, RotateCw } from 'lucide-react'
+import DiggingView from './DiggingView'
 
 const TABS = [
   { id: 'digging', label: 'Digging' },
@@ -11,6 +12,32 @@ const TABS = [
 export default function BrowserLayout() {
   const [activeTab, setActiveTab] = useState('digging')
   const [searchQuery, setSearchQuery] = useState('')
+  const [graphData, setGraphData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const performSearch = useCallback(async (query) => {
+    const q = (typeof query === 'string' ? query : searchQuery).trim()
+    if (!q) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/resolve-track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ search: q }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Search failed')
+      setGraphData(data.youtube_metadata)
+      setSearchQuery([data.youtube_metadata.title, data.youtube_metadata.artist].filter(Boolean).join(' '))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [searchQuery])
+
 
   return (
     <div className="min-h-screen bg-chrome-gray flex flex-col rounded-t-xl overflow-hidden shadow-lg">
@@ -61,25 +88,35 @@ export default function BrowserLayout() {
         </div>
 
         {/* Omnibox - Song Search */}
-        <div className="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full pl-4 pr-3 py-2 hover:bg-white hover:border-gray-300 transition-colors focus-within:bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+        <form
+          className="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full pl-4 pr-3 py-2 hover:bg-white hover:border-gray-300 transition-colors focus-within:bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
+          onSubmit={(e) => { e.preventDefault(); performSearch(searchQuery); }}
+        >
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search for a track..."
             className="flex-1 bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-400 min-w-0"
+            disabled={loading}
           />
-        </div>
+        </form>
       </div>
 
       {/* Content Area - switches based on activeTab */}
-      <div className="flex-1 bg-white min-h-[400px] p-6">
+      <div className="flex-1 bg-white min-h-[400px] flex flex-col overflow-hidden">
         {activeTab === 'digging' && (
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Digging</h2>
-            <p className="text-gray-500">
-              Radial Discovery Graph. Use the Omnibox above to search for tracks.
-            </p>
+          <div className="flex-1 flex flex-col p-4">
+            {error && (
+              <p className="text-red-500 text-sm mb-2">{error}</p>
+            )}
+            {loading && (
+              <p className="text-gray-500 text-sm mb-2">Searching...</p>
+            )}
+            <DiggingView
+              graphData={graphData}
+              onSearch={performSearch}
+            />
           </div>
         )}
         {activeTab === 'syncing' && (
