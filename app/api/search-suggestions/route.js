@@ -16,12 +16,23 @@ export async function GET(request) {
     const ytmusic = new YTMusic()
     await ytmusic.initialize()
     const results = await ytmusic.search(q)
-    const items = (Array.isArray(results) ? results : []).slice(0, 8).map((r) => ({
-      title: r.title ?? r.name ?? '',
-      artist: r.artist ?? r.artists?.[0]?.name ?? r.author ?? '',
-      videoId: r.videoId ?? r.id,
-      query: [r.title ?? r.name, r.artist ?? r.artists?.[0]?.name ?? r.author].filter(Boolean).join(' '),
-    }))
+    const toArtistStr = (v) => {
+      if (v == null) return ''
+      if (typeof v === 'string') return v
+      if (typeof v === 'object' && v?.name) return String(v.name)
+      return ''
+    }
+    const items = (Array.isArray(results) ? results : []).slice(0, 8).map((r) => {
+      const artistRaw = r.artist ?? r.artists?.[0] ?? r.author
+      const artist = toArtistStr(artistRaw)
+      const title = r.title ?? r.name ?? ''
+      return {
+        title,
+        artist,
+        videoId: r.videoId ?? r.id,
+        query: [title, artist].filter(Boolean).join(' '),
+      }
+    })
 
     return NextResponse.json({ results: items })
   } catch (err) {

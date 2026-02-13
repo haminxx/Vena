@@ -120,11 +120,11 @@ function TrackDetailCard({ track, onClose }) {
         <div className="flex items-center gap-3 mb-3">
           <img
             src={track.artistImage || `https://i.pravatar.cc/80?u=${track.id}`}
-            alt={track.artist}
+            alt={typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? '')}
             className="w-12 h-12 rounded-full object-cover"
           />
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{track.artist}</p>
+            <p className="font-semibold text-gray-900 truncate">{typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? '')}</p>
             <p className="text-sm text-gray-500 truncate">{track.title}</p>
           </div>
         </div>

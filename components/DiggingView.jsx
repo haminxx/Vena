@@ -34,12 +34,18 @@ function addRecentSearch(item) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(updated))
 }
 
+function toArtistString(v) {
+  if (v == null) return ''
+  if (typeof v === 'string') return v
+  if (typeof v === 'object' && v?.name) return String(v.name)
+  return ''
+}
 function metadataToTrack(meta) {
   if (!meta || typeof meta !== 'object') return null
   return {
     id: meta.spotifyId || meta.videoId || `track-${Date.now()}`,
     title: meta.title ?? '',
-    artist: meta.artist ?? '',
+    artist: toArtistString(meta.artist),
     artistImage: meta.thumbnail ?? null,
     previewUrl: meta.previewUrl ?? null,
     spotifyId: meta.spotifyId ?? null,
@@ -98,7 +104,8 @@ export default function DiggingView({
 
   const handleSelectSuggestion = useCallback(
     (item) => {
-      const query = item.query ?? [item.title, item.artist].filter(Boolean).join(' ')
+      const artistStr = typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')
+      const query = item.query ?? [item.title, artistStr].filter(Boolean).join(' ')
       setSearchInput(query)
       performSearch(query)
     },

@@ -59,7 +59,8 @@ export default function OmniSearch({
 
   const handleSelect = useCallback(
     (item) => {
-      const displayText = item.query ?? [item.title, item.artist].filter(Boolean).join(' ')
+      const artistStr = typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')
+      const displayText = item.query ?? [item.title, artistStr].filter(Boolean).join(' ')
       setInputValue(displayText)
       setSuggestions([])
       setHighlightedIndex(-1)
@@ -166,7 +167,7 @@ export default function OmniSearch({
             >
               {item.title}
               {item.artist ? (
-                <span className={dark ? 'text-gray-400' : 'text-gray-500'}> — {item.artist}</span>
+                <span className={dark ? 'text-gray-400' : 'text-gray-500'}> — {typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')}</span>
               ) : (
                 ''
               )}

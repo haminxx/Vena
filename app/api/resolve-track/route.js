@@ -40,8 +40,15 @@ export async function POST(request) {
       )
     }
 
+    const toArtistStr = (v) => {
+      if (v == null) return ''
+      if (typeof v === 'string') return v
+      if (typeof v === 'object' && v?.name) return String(v.name)
+      return ''
+    }
     const title = first.title ?? first.name ?? ''
-    const artist = first.artist ?? first.artists?.[0]?.name ?? first.author ?? ''
+    const artistRaw = first.artist ?? first.artists?.[0] ?? first.author
+    const artist = toArtistStr(artistRaw)
     const videoId = first.videoId ?? first.id ?? ''
 
     // 2. Get Spotify access token (Client Credentials)
@@ -94,12 +101,15 @@ export async function POST(request) {
             artist,
             videoId,
             thumbnail: first.thumbnail ?? first.thumbnails?.[0]?.url,
-            related: (ytResults.slice(1, 6) ?? []).map((r) => ({
-          videoId: r.videoId ?? r.id,
-          title: r.title ?? r.name,
-          artist: r.artist ?? r.artists?.[0]?.name ?? r.author,
-          thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
-        })),
+            related: (ytResults.slice(1, 6) ?? []).map((r) => {
+          const ar = r.artist ?? r.artists?.[0] ?? r.author
+          return {
+            videoId: r.videoId ?? r.id,
+            title: r.title ?? r.name,
+            artist: toArtistStr(ar),
+            thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
+          }
+        }),
           },
         },
         { status: 404 }
@@ -139,12 +149,15 @@ export async function POST(request) {
       spotifyId,
       previewUrl,
       audioFeatures,
-      related: (ytResults.slice(1, 6) ?? []).map((r) => ({
-        videoId: r.videoId ?? r.id,
-        title: r.title ?? r.name,
-        artist: r.artist ?? r.artists?.[0]?.name ?? r.author,
-        thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
-      })),
+      related: (ytResults.slice(1, 6) ?? []).map((r) => {
+        const ar = r.artist ?? r.artists?.[0] ?? r.author
+        return {
+          videoId: r.videoId ?? r.id,
+          title: r.title ?? r.name,
+          artist: toArtistStr(ar),
+          thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
+        }
+      }),
     }
 
     return NextResponse.json({

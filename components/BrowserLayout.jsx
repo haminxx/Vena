@@ -228,7 +228,7 @@ export default function BrowserLayout() {
                   }`}
                 >
                   {item.title}
-                  {item.artist ? <span className="text-gray-500"> — {item.artist}</span> : ''}
+                  {item.artist ? <span className="text-gray-500"> — {typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')}</span> : ''}
                 </button>
               ))}
             </div>
