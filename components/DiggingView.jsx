@@ -37,7 +37,7 @@ function buildGraphData(metadata) {
   return { nodes, links }
 }
 
-export default function DiggingView({ graphData, onSearch }) {
+export default function DiggingView({ graphData, onSearch, dark = false }) {
   const fgRef = useRef()
   const containerRef = useRef()
   const [imgCache, setImgCache] = useState({})
@@ -134,7 +134,7 @@ export default function DiggingView({ graphData, onSearch }) {
 
   if (!graphData) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500 min-h-[300px]">
+      <div className={`flex-1 flex items-center justify-center min-h-[300px] ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
         <p>Search for a track in the Omnibox above to explore related songs.</p>
       </div>
     )
@@ -157,9 +157,9 @@ export default function DiggingView({ graphData, onSearch }) {
           ctx.fill()
         }}
         onNodeClick={handleNodeClick}
-        linkColor="#d1d5db"
+        linkColor={dark ? '#4b5563' : '#d1d5db'}
         linkWidth={1}
-        backgroundColor="#ffffff"
+        backgroundColor={dark ? '#0a0a0a' : '#ffffff'}
         nodeLabel={(node) => `${node.title}${node.artist ? ` - ${node.artist}` : ''}`}
       />
     </div>

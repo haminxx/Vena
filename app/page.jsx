@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import BrowserLayout from '@/components/BrowserLayout'
+import ClientProviders from '@/components/ClientProviders'
 
 export default function Home() {
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -36,5 +37,9 @@ export default function Home() {
     )
   }
 
-  return <BrowserLayout />
+  return (
+    <ClientProviders>
+      <BrowserLayout />
+    </ClientProviders>
+  )
 }
