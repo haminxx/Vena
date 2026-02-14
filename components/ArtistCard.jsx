@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Play, X } from 'lucide-react'
 import { useAudioPreview } from '@/hooks/useAudioPreview'
+import { useMoodBackground } from '@/context/MoodBackgroundContext'
 
 /**
  * Artist Post Card - glassmorphism style, appears when a node is clicked.
@@ -11,6 +12,7 @@ import { useAudioPreview } from '@/hooks/useAudioPreview'
  */
 export default function ArtistCard({ track, onClose }) {
   const { play, stop, playingUrl } = useAudioPreview()
+  const { setPlayingTrack } = useMoodBackground()
   const [genres, setGenres] = useState([])
   const [topTracks, setTopTracks] = useState([])
   const [loading, setLoading] = useState(false)
@@ -21,8 +23,17 @@ export default function ArtistCard({ track, onClose }) {
   // Reset: stop any playing audio when opening a new card
   useEffect(() => {
     stop()
-    return () => stop()
-  }, [track?.id, stop])
+    setPlayingTrack(null)
+    return () => {
+      stop()
+      setPlayingTrack(null)
+    }
+  }, [track?.id, stop, setPlayingTrack])
+
+  // Clear playing mood when audio stops
+  useEffect(() => {
+    if (!playingUrl) setPlayingTrack(null)
+  }, [playingUrl, setPlayingTrack])
 
   useEffect(() => {
     const artistId = track?.artistId
@@ -44,6 +55,13 @@ export default function ArtistCard({ track, onClose }) {
       })
       .finally(() => setLoading(false))
   }, [track?.artistId])
+
+  const handlePlay = (url) => {
+    play(url)
+    if (url) {
+      setPlayingTrack({ ...track, genres })
+    }
+  }
 
   const displayTracks = topTracks.length > 0 ? topTracks : (track?.topTracks ?? []).slice(0, 5).map((t) => ({
     id: t.id ?? t.name,
@@ -112,7 +130,7 @@ export default function ArtistCard({ track, onClose }) {
                 >
                   <span className="text-sm text-gray-800 truncate flex-1">{t.name}</span>
                   <button
-                    onClick={() => play(t.preview)}
+                    onClick={() => handlePlay(t.preview)}
                     disabled={!t.preview}
                     className={`p-2 rounded-full shrink-0 transition-colors ${
                       t.preview

@@ -6,6 +6,7 @@ import { Html, CameraControls, Billboard, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import { mapTrackToPosition } from '@/utils/mapTrackToPosition'
 import { ArrowLeft } from 'lucide-react'
+import { useMoodBackground } from '@/context/MoodBackgroundContext'
 import DiggingNode, { NODE_RADIUS } from './DiggingNode'
 import ArtistCard from './ArtistCard'
 
@@ -115,6 +116,8 @@ function Scene({
 }
 
 export default function DiggingCube({ dark = false, initialTrack, onBack }) {
+  const { setHoverTrack } = useMoodBackground()
+
   const [nodes, setNodes] = useState(() => {
     if (!initialTrack) return []
     const pos = initialTrack.audioFeatures
@@ -193,6 +196,10 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
     },
     [fetchSimilar]
   )
+
+  useEffect(() => {
+    setHoverTrack(hoveredTrack ?? null)
+  }, [hoveredTrack, setHoverTrack])
 
   if (!initialTrack && nodes.length === 0) {
     return null
