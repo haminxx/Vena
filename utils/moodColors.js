@@ -12,7 +12,7 @@ export const MOOD_PALETTES = {
   dark: ['#000000', '#14213d'],
   sad: ['#000000', '#14213d'],
   indie: ['#2c3e50', '#8e44ad'],
-  lo-fi: ['#2c3e50', '#8e44ad'],
+  'lo-fi': ['#2c3e50', '#8e44ad'],
   ambient: ['#2c3e50', '#8e44ad'],
   rock: ['#4a0404', '#d4af37'],
   metal: ['#4a0404', '#000000'],
