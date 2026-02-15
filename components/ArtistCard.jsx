@@ -16,9 +16,10 @@ export default function ArtistCard({ track, onClose }) {
   const [genres, setGenres] = useState([])
   const [topTracks, setTopTracks] = useState([])
   const [loading, setLoading] = useState(false)
+  const [artistImageLarge, setArtistImageLarge] = useState(null)
 
   const artistName = typeof track?.artist === 'string' ? track.artist : (track?.artist?.name ?? '')
-  const avatarUrl = track?.artistImage ?? track?.image ?? `https://i.pravatar.cc/80?u=${track?.id}`
+  const avatarUrl = artistImageLarge ?? track?.artistImageLarge ?? track?.artistImage ?? track?.image ?? `https://i.pravatar.cc/80?u=${track?.id}`
 
   // Reset: stop any playing audio when opening a new card
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function ArtistCard({ track, onClose }) {
     if (!artistId || typeof artistId !== 'string') {
       setGenres([])
       setTopTracks([])
+      setArtistImageLarge(null)
       return
     }
     setLoading(true)
@@ -48,10 +50,12 @@ export default function ArtistCard({ track, onClose }) {
       .then((d) => {
         setGenres(d.genres ?? [])
         setTopTracks(d.topTracks ?? [])
+        setArtistImageLarge(d.imageLarge ?? d.image ?? null)
       })
       .catch(() => {
         setGenres([])
         setTopTracks([])
+        setArtistImageLarge(null)
       })
       .finally(() => setLoading(false))
   }, [track?.artistId])

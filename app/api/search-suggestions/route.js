@@ -52,15 +52,34 @@ export async function GET(request) {
 
     const results = []
 
+    // Light payload: id, name, artist_name, image only. Use artist.images (not album).
+    const artistIds = [...new Set(tracks.map((t) => t.artists?.[0]?.id).filter(Boolean))]
+    let artistMap = {}
+    if (artistIds.length > 0) {
+      const artistsRes = await fetch(
+        `https://api.spotify.com/v1/artists?ids=${artistIds.slice(0, 5).join(',')}`,
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      )
+      if (artistsRes.ok) {
+        const artistsData = await artistsRes.json()
+        for (const a of artistsData.artists ?? []) {
+          if (a?.id) artistMap[a.id] = a
+        }
+      }
+    }
+
     for (const t of tracks.slice(0, 5)) {
-      const artistName = t.artists?.[0]?.name ?? ''
+      const artist = t.artists?.[0]
+      const artistName = artist?.name ?? ''
+      const artistData = artist?.id ? artistMap[artist.id] : null
+      const image = artistData?.images?.[0]?.url ?? null
       results.push({
         type: 'track',
         spotifyId: t.id,
         title: t.name,
         artist: artistName,
-        artistId: t.artists?.[0]?.id ?? null,
-        thumbnail: t.album?.images?.[0]?.url ?? null,
+        artistId: artist?.id ?? null,
+        thumbnail: image,
         query: [t.name, artistName].filter(Boolean).join(' '),
       })
     }

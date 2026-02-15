@@ -151,6 +151,21 @@ export async function POST(request) {
     const artistId = spotifyTrack.artists?.[0]?.id ?? null
     const previewUrl = spotifyTrack.preview_url ?? null
 
+    // Fetch artist for Spotify artist images (images[0]=large for card, images[2]=small for node)
+    let artistImageLarge = null
+    let artistImageSmall = null
+    if (artistId) {
+      const artistRes = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+      if (artistRes.ok) {
+        const artistData = await artistRes.json()
+        const imgs = artistData.images ?? []
+        artistImageLarge = imgs[0]?.url ?? null
+        artistImageSmall = imgs[2]?.url ?? imgs[1]?.url ?? imgs[0]?.url ?? null
+      }
+    }
+
     // 4. Fetch audio-features (for 3D positioning)
     let audioFeatures = null
     const featuresRes = await fetch(
@@ -173,13 +188,15 @@ export async function POST(request) {
     }
 
     const firstYt = Array.isArray(ytResults) ? ytResults[0] : null
-    const thumbnail = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? spotifyTrack.album?.images?.[0]?.url ?? null
+    const fallbackThumb = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? spotifyTrack.album?.images?.[0]?.url ?? null
 
     const youtube_metadata = {
       title,
       artist,
       videoId,
-      thumbnail,
+      thumbnail: artistImageSmall ?? artistImageLarge ?? fallbackThumb,
+      artistImageLarge: artistImageLarge ?? fallbackThumb,
+      artistImageSmall: artistImageSmall ?? artistImageLarge ?? fallbackThumb,
       spotifyId,
       artistId,
       previewUrl,

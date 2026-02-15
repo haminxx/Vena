@@ -54,10 +54,16 @@ export async function GET(request) {
       preview: t.preview_url,
     }))
 
+    const imgs = artist?.images ?? []
+    const imageLarge = imgs[0]?.url ?? null
+    const imageSmall = imgs[2]?.url ?? imgs[1]?.url ?? imgs[0]?.url ?? null
+
     return NextResponse.json({
       genres,
       topTracks,
-      image: artist?.images?.[0]?.url ?? null,
+      image: imageLarge,
+      imageLarge,
+      imageSmall,
     })
   } catch (err) {
     console.error('[artist-details]', err)

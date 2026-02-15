@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useMoodBackground } from '@/context/MoodBackgroundContext'
 import DiggingNode, { NODE_RADIUS } from './DiggingNode'
 import ArtistCard from './ArtistCard'
+import NodeActionMenu from './NodeActionMenu'
 
 const CUBE_SIZE = 6
 const CLUSTER_OFFSET = 0.8
@@ -57,8 +58,12 @@ function CameraPresetController({ preset, controlsRef }) {
 function Scene({
   nodes,
   links,
-  selectedTrack,
-  onSelectTrack,
+  selectedNodeId,
+  showCardTrackId,
+  onSelectNode,
+  onExpand,
+  onAbout,
+  onClose,
   hoveredTrack,
   onHover,
   onUnhover,
@@ -84,17 +89,37 @@ function Scene({
 
       {nodes.map((track) => {
         const pos = Array.isArray(track.position) ? track.position : [0, 0, 0]
+        const isMenuOpen = selectedNodeId === track.id
+        const isCardOpen = showCardTrackId === track.id
         return (
           <group key={track.id} position={pos}>
             <DiggingNode
               track={track}
               isHovered={hoveredTrack?.id === track.id}
-              isSelected={selectedTrack?.id === track.id}
-              onClick={onSelectTrack}
+              isSelected={isMenuOpen || isCardOpen}
+              onClick={() => onSelectNode(track)}
               onPointerOver={onHover}
               onPointerOut={onUnhover}
             />
-            {selectedTrack?.id === track.id && (
+            {isMenuOpen && !isCardOpen && (
+              <Billboard follow lockX={false} lockY={false} lockZ={false}>
+                <Html
+                  transform
+                  position={[0, NODE_RADIUS + 0.35, 0]}
+                  center
+                  pointerEvents="none"
+                >
+                  <div className="pointer-events-auto">
+                    <NodeActionMenu
+                      onExpand={() => onExpand(track)}
+                      onAbout={() => onAbout(track)}
+                      onClose={onClose}
+                    />
+                  </div>
+                </Html>
+              </Billboard>
+            )}
+            {isCardOpen && (
               <Billboard follow lockX={false} lockY={false} lockZ={false}>
                 <Html
                   transform
@@ -103,7 +128,7 @@ function Scene({
                   pointerEvents="none"
                 >
                   <div className="pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
-                    <ArtistCard track={track} onClose={() => onSelectTrack(null)} />
+                    <ArtistCard track={track} onClose={() => onClose()} />
                   </div>
                 </Html>
               </Billboard>
@@ -126,7 +151,8 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
     return [{ ...initialTrack, position: pos, parentId: null }]
   })
   const [links, setLinks] = useState([])
-  const [selectedTrack, setSelectedTrack] = useState(null)
+  const [selectedNodeId, setSelectedNodeId] = useState(null)
+  const [showCardTrackId, setShowCardTrackId] = useState(null)
   const [hoveredTrack, setHoveredTrack] = useState(null)
   const [cameraPreset, setCameraPreset] = useState('diagonal')
   const [loadingSimilar, setLoadingSimilar] = useState(false)
@@ -183,17 +209,29 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
     }
   }, [nodes])
 
-  const handleNodeClick = useCallback(
+  const handleSelectNode = useCallback((track) => {
+    if (!track) return
+    setSelectedNodeId((prev) => (prev === track.id ? null : track.id))
+    setShowCardTrackId(null)
+  }, [])
+
+  const handleExpand = useCallback(
     (track) => {
-      if (track === null) {
-        setSelectedTrack(null)
-        return
-      }
-      setSelectedTrack(track)
+      setSelectedNodeId(null)
       fetchSimilar(track)
     },
     [fetchSimilar]
   )
+
+  const handleAbout = useCallback((track) => {
+    setSelectedNodeId(null)
+    setShowCardTrackId(track?.id ?? null)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    setSelectedNodeId(null)
+    setShowCardTrackId(null)
+  }, [])
 
   useEffect(() => {
     setHoverTrack(hoveredTrack ?? null)
@@ -224,7 +262,7 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
         gl={{ antialias: true, alpha: false }}
         style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => gl.setClearColor(dark ? '#0a0a0a' : '#0f0f0f')}
-        onPointerMissed={() => setSelectedTrack(null)}
+        onPointerMissed={() => { setSelectedNodeId(null); setShowCardTrackId(null) }}
       >
         <color attach="background" args={[dark ? '#0a0a0a' : '#0f0f0f']} />
         <CameraControls
@@ -238,8 +276,12 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
         <Scene
           nodes={nodes}
           links={links}
-          selectedTrack={selectedTrack}
-          onSelectTrack={handleNodeClick}
+          selectedNodeId={selectedNodeId}
+          showCardTrackId={showCardTrackId}
+          onSelectNode={handleSelectNode}
+          onExpand={handleExpand}
+          onAbout={handleAbout}
+          onClose={handleClose}
           hoveredTrack={hoveredTrack}
           onHover={setHoveredTrack}
           onUnhover={() => setHoveredTrack(null)}

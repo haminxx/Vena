@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette } from 'lucide-react
 import { useBrowserState } from '@/context/BrowserState'
 import { useTabHistory } from '@/hooks/useTabHistory'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useSpotifySearch } from '@/hooks/useSpotifySearch'
 import DiggingView from './DiggingView'
 import NewTabPage from './NewTabPage'
 
@@ -31,12 +32,12 @@ export default function BrowserLayout() {
   const [searchInput, setSearchInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const suggestionsRef = useRef(null)
   const inputRef = useRef(null)
 
   const debouncedSearch = useDebounce(searchInput, 200)
+  const { results: suggestions } = useSpotifySearch(debouncedSearch, searchInput)
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
 
@@ -90,27 +91,11 @@ export default function BrowserLayout() {
     (item) => {
       setSearchInput(item.query)
       setShowSuggestions(false)
-      setSuggestions([])
       performSearch(item.query, false, item)
     },
     [performSearch]
   )
 
-  useEffect(() => {
-    if (!debouncedSearch || debouncedSearch.length < 2) {
-      setSuggestions([])
-      return
-    }
-    const ctrl = new AbortController()
-    fetch(`/api/search-suggestions?q=${encodeURIComponent(debouncedSearch)}`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((d) => setSuggestions(d.results ?? []))
-      .catch((err) => {
-        if (err.name === 'AbortError') return
-        setSuggestions([])
-      })
-    return () => ctrl.abort()
-  }, [debouncedSearch])
 
   useEffect(() => {
     const handleClickOutside = (e) => {

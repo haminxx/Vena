@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useSpotifySearch } from '@/hooks/useSpotifySearch'
 import { Search } from 'lucide-react'
 
 /**
  * Google-style autocomplete search bar with debounced suggestions.
- * Uses Spotify Web API for search. 200ms debounce, AbortController for request cancellation.
+ * Uses useSpotifySearch: 200ms debounce, AbortController cancels on every keystroke.
  */
 export default function OmniSearch({
   value = '',
@@ -19,35 +20,17 @@ export default function OmniSearch({
   className = '',
 }) {
   const [inputValue, setInputValue] = useState(value)
-  const [suggestions, setSuggestions] = useState([])
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const suggestionsRef = useRef(null)
   const inputRef = useRef(null)
 
   const debouncedInput = useDebounce(inputValue, 200)
+  const { results: suggestions } = useSpotifySearch(debouncedInput, inputValue)
 
   // Sync external value
   useEffect(() => {
     setInputValue(value)
   }, [value])
-
-  // Debounced fetch with AbortController - cancels previous request when user keeps typing
-  useEffect(() => {
-    if (!debouncedInput || debouncedInput.length < 2) {
-      setSuggestions([])
-      setHighlightedIndex(-1)
-      return
-    }
-    const ctrl = new AbortController()
-    fetch(`/api/search-suggestions?q=${encodeURIComponent(debouncedInput)}`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((d) => setSuggestions(d.results ?? []))
-      .catch((err) => {
-        if (err.name === 'AbortError') return
-        setSuggestions([])
-      })
-    return () => ctrl.abort()
-  }, [debouncedInput])
 
   const handleChange = useCallback(
     (e) => {
