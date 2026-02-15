@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { useAudioPlayer } from '@/context/AudioPlayerContext'
-import { Html, CameraControls, Billboard, Line, Bounds } from '@react-three/drei'
+import { Html, CameraControls, Billboard, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import { mapTrackToPosition } from '@/utils/mapTrackToPosition'
 import { ArrowLeft } from 'lucide-react'
@@ -56,6 +56,16 @@ function CameraPresetController({ preset, controlsRef }) {
   return null
 }
 
+function isValidPosition(pos) {
+  return Array.isArray(pos) && pos.length >= 3 &&
+    typeof pos[0] === 'number' && typeof pos[1] === 'number' && typeof pos[2] === 'number'
+}
+
+function safePosition(pos) {
+  if (!isValidPosition(pos)) return [0, 0, 0]
+  return [pos[0], pos[1], pos[2]]
+}
+
 function Scene({
   nodes,
   links,
@@ -72,6 +82,8 @@ function Scene({
   onExtractColor,
   activeNodeId,
   lastTriggerTime,
+  savedTracks,
+  addSavedTrack,
 }) {
   return (
     <>
@@ -81,10 +93,9 @@ function Scene({
 
       <AxisGuides />
 
-      <Bounds fit clip observe margin={1.2}>
-        {links.map((link, i) => {
-        const from = Array.isArray(link.from) ? link.from : [0, 0, 0]
-        const to = Array.isArray(link.to) ? link.to : [0, 0, 0]
+      {links.map((link, i) => {
+        const from = safePosition(link.from)
+        const to = safePosition(link.to)
         return (
           <Line
             key={i}
@@ -96,7 +107,7 @@ function Scene({
       })}
 
       {nodes.map((track) => {
-        const pos = Array.isArray(track.position) ? track.position : [0, 0, 0]
+        const pos = safePosition(track.position)
         const isMenuOpen = selectedNodeId === track.id
         const isCardOpen = showCardTrackId === track.id
         return (
@@ -152,7 +163,6 @@ function Scene({
           </group>
         )
       })}
-      </Bounds>
     </>
   )
 }
@@ -354,6 +364,8 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           onExtractColor={setAlbumColorFromImage}
           activeNodeId={activeNodeId}
           lastTriggerTime={lastTriggerTime}
+          savedTracks={savedTracks}
+          addSavedTrack={addSavedTrack}
         />
       </Canvas>
 

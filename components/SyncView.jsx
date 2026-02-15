@@ -19,14 +19,32 @@ export async function initStrudel() {
     const { samples, initAudioOnFirstClick } = await import('@strudel.cycles/webaudio')
 
     async function prebake() {
-      await samples(
-        'https://strudel.tidalcycles.org/tidal-drum-machines.json',
-        'github:ritchse/tidal-drum-machines/main/machines/'
-      )
-      await samples(
-        'https://strudel.tidalcycles.org/EmuSP12.json',
-        'https://strudel.tidalcycles.org/EmuSP12/'
-      )
+      try {
+        await samples(
+          'https://strudel.cc/tidal-drum-machines.json',
+          'github:ritchse/tidal-drum-machines/main/machines/'
+        )
+      } catch (e1) {
+        try {
+          await samples(
+            'https://strudel.tidalcycles.org/tidal-drum-machines.json',
+            'github:ritchse/tidal-drum-machines/main/machines/'
+          )
+        } catch {}
+      }
+      try {
+        await samples(
+          'https://strudel.cc/EmuSP12.json',
+          'https://strudel.cc/EmuSP12/'
+        )
+      } catch (e2) {
+        try {
+          await samples(
+            'https://strudel.tidalcycles.org/EmuSP12.json',
+            'https://strudel.tidalcycles.org/EmuSP12/'
+          )
+        } catch {}
+      }
     }
 
     await evalScope(
@@ -48,7 +66,7 @@ export async function initStrudel() {
 let strudelInitialized = false
 
 export default function SyncView({ dark = false }) {
-  const savedTracks = useAppStore((s) => s.savedTracks)
+  const savedTracks = useAppStore((s) => s.savedTracks) ?? []
   const syncIsPlaying = useAppStore((s) => s.syncIsPlaying)
   const [ready, setReady] = useState(false)
   const { play: playSpotify, stop: stopSpotify } = useAudioPlayer()

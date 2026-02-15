@@ -31,6 +31,7 @@ export default function DiggingNode({
   isActiveNode,
   lastTriggerTime,
 }) {
+  if (!track) return null
   const groupRef = useRef()
   const [texture, setTexture] = useState(null)
   const textureRef = useRef(null)
@@ -49,16 +50,20 @@ export default function DiggingNode({
   }, [isActiveNode, lastTriggerTime])
 
   useFrame((_, delta) => {
-    if (groupRef.current) {
-      if (pulseRef.current > baseScale) {
-        pulseRef.current = Math.max(baseScale, pulseRef.current - PULSE_DECAY * delta * 10)
-      }
-      const scale = Math.max(baseScale, pulseRef.current)
-      groupRef.current.scale.lerp(
-        new THREE.Vector3(scale, scale, scale),
-        0.15
-      )
+    if (!groupRef.current) return
+    const s = Number(pulseRef.current)
+    const b = Number(baseScale)
+    if (!Number.isFinite(s)) pulseRef.current = 0
+    if (!Number.isFinite(b)) return
+    if (pulseRef.current > baseScale) {
+      pulseRef.current = Math.max(baseScale, pulseRef.current - PULSE_DECAY * delta * 10)
     }
+    const scale = Math.max(baseScale, pulseRef.current)
+    if (!Number.isFinite(scale)) return
+    groupRef.current.scale.lerp(
+      new THREE.Vector3(scale, scale, scale),
+      0.15
+    )
   })
 
   useEffect(() => {
