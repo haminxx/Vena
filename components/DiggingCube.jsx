@@ -14,30 +14,25 @@ import NodeActionMenu from './NodeActionMenu'
 import AxisGuides from './AxisGuides'
 import { useAppStore } from '@/store/useAppStore'
 
-const CUBE_SIZE = 6
 const CLUSTER_OFFSET = 0.8
 
 const CAMERA_PRESETS = {
-  front: { position: [0, 0, 10], target: [0, 0, 0] },
-  side: { position: [10, 0, 0], target: [0, 0, 0] },
-  top: { position: [0, 10, 0], target: [0, 0, 0] },
-  diagonal: { position: [6, 6, 6], target: [0, 0, 0] },
+  front: { position: [0, 0, 25], target: [0, 0, 0] },
+  side: { position: [25, 0, 0], target: [0, 0, 0] },
+  top: { position: [0, 25, 0], target: [0, 0, 0] },
+  diagonal: { position: [20, 20, 20], target: [0, 0, 0] },
 }
 
 function positionFromFeatures(features, parentPos = [0, 0, 0], index = 0) {
   const pos = mapTrackToPosition(features)
-  const scale = CUBE_SIZE / 2
-  const baseX = pos.x * scale
-  const baseY = pos.y * scale
-  const baseZ = pos.z * scale
   const angle = (index / 5) * Math.PI * 2
   const radius = CLUSTER_OFFSET
   const dx = Math.cos(angle) * radius
   const dz = Math.sin(angle) * radius
   return [
-    parentPos[0] + baseX * 0.3 + dx,
-    parentPos[1] + baseY * 0.3,
-    parentPos[2] + baseZ * 0.3 + dz,
+    parentPos[0] + pos.x + dx,
+    parentPos[1] + pos.y,
+    parentPos[2] + pos.z + dz,
   ]
 }
 
@@ -171,7 +166,11 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   useEffect(() => {
     if (initialTrack && controlsRef.current) {
-      controlsRef.current.setLookAt(6, 6, 6, 0, 0, 0, true)
+      const pos = initialTrack.audioFeatures
+        ? mapTrackToPosition(initialTrack.audioFeatures)
+        : { x: 0, y: 0, z: 0 }
+      const offset = 12
+      controlsRef.current.setLookAt(pos.x + offset, pos.y + offset, pos.z + offset, pos.x, pos.y, pos.z, true)
     }
   }, [initialTrack?.id])
 
@@ -180,7 +179,8 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       const node = nodes.find((n) => n.id === focusNodeId || n.spotifyId === focusNodeId)
       if (node?.position) {
         const [x, y, z] = Array.isArray(node.position) ? node.position : [0, 0, 0]
-        controlsRef.current.setLookAt(x + 2, y + 2, z + 2, x, y, z, true)
+        const offset = 8
+        controlsRef.current.setLookAt(x + offset, y + offset, z + offset, x, y, z, true)
       }
     }
   }, [focusNodeId, nodes])
@@ -214,9 +214,9 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
         const existing = nodes.find((n) => n.id === t.id || n.videoId === t.videoId)
         if (existing) continue
         const newPos = [
-          parentPos[0] + (Math.random() - 0.5) * 2,
-          parentPos[1] + (Math.random() - 0.5) * 2,
-          parentPos[2] + (Math.random() - 0.5) * 2,
+          parentPos[0] + (Math.random() - 0.5) * 4,
+          parentPos[1] + (Math.random() - 0.5) * 4,
+          parentPos[2] + (Math.random() - 0.5) * 4,
         ]
         newNodes.push({
           id: t.id,
@@ -226,6 +226,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           artistId: t.artistId,
           artistImage: t.artistImage ?? t.image ?? t.thumbnail,
           albumImage: t.albumImage ?? t.artistImage ?? t.image ?? t.thumbnail,
+          albumImageMedium: t.albumImageMedium ?? t.albumImage ?? t.artistImage ?? t.image ?? t.thumbnail,
           previewUrl: t.previewUrl,
           spotifyId: t.spotifyId,
           audioFeatures: t.audioFeatures,
@@ -298,7 +299,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
         </div>
       )}
       <Canvas
-        camera={{ position: [6, 6, 6], fov: 50 }}
+        camera={{ position: [20, 20, 20], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
         style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => gl.setClearColor(dark ? '#0a0a0a' : '#0f0f0f')}
@@ -309,7 +310,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           ref={controlsRef}
           makeDefault
           minDistance={2}
-          maxDistance={20}
+          maxDistance={50}
           smoothTime={0.5}
         />
         <CameraPresetController preset={cameraPreset} controlsRef={controlsRef} />

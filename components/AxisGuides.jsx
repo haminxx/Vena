@@ -2,7 +2,7 @@
 
 import { Line, Html, Billboard } from '@react-three/drei'
 
-const AXIS_LENGTH = 4
+const AXIS_LENGTH = 10
 const LABEL_OFFSET = 0.5
 
 const labelStyle = {
@@ -41,18 +41,8 @@ function DashedAxisLine({ start, end, color = '#666' }) {
 export default function AxisGuides() {
   return (
     <group>
-      {/* X Axis: Organic (-) to Orchestral (+) */}
+      {/* X Axis: no labels - center clean */}
       <DashedAxisLine start={[-AXIS_LENGTH, 0, 0]} end={[AXIS_LENGTH, 0, 0]} color="#888" />
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Html position={[-AXIS_LENGTH - LABEL_OFFSET, 0, 0]} center style={labelStyle}>
-          <span>Organic</span>
-        </Html>
-      </Billboard>
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Html position={[AXIS_LENGTH + LABEL_OFFSET, 0, 0]} center style={labelStyle}>
-          <span>Orchestral</span>
-        </Html>
-      </Billboard>
 
       {/* Y Axis: Slower (-) to Faster (+) */}
       <DashedAxisLine start={[0, -AXIS_LENGTH, 0]} end={[0, AXIS_LENGTH, 0]} color="#888" />
@@ -67,18 +57,8 @@ export default function AxisGuides() {
         </Html>
       </Billboard>
 
-      {/* Z Axis: Epic (-) to Ethereal (+) */}
+      {/* Z Axis: no labels - center clean */}
       <DashedAxisLine start={[0, 0, -AXIS_LENGTH]} end={[0, 0, AXIS_LENGTH]} color="#888" />
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Html position={[0, 0, -AXIS_LENGTH - LABEL_OFFSET]} center style={labelStyle}>
-          <span>Epic</span>
-        </Html>
-      </Billboard>
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Html position={[0, 0, AXIS_LENGTH + LABEL_OFFSET]} center style={labelStyle}>
-          <span>Ethereal</span>
-        </Html>
-      </Billboard>
     </group>
   )
 }

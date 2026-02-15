@@ -1,29 +1,16 @@
 /**
- * Maps Spotify Audio Features to 3D coordinates inside a unit cube [-1, 1].
+ * Maps Spotify Audio Features to 3D coordinates.
+ * Normalized to distribute dots evenly inside bounding box [-15, -15, -15] to [15, 15, 15].
  *
- * Y (Vertical): BPM Scale
- *   +1 = Fast (high tempo), -1 = Slow (low tempo)
+ * Y-Axis (Tempo/Speed): 60-180 BPM → Y -10 (bottom) to +10 (top)
+ * X-Axis (Organic vs Electronic): acousticness vs energy → Left (-X) vs Right (+X)
+ * Z-Axis (Mood/Valence): High valence = Front (+Z), Low valence = Back (-Z)
  *
- * X (Horizontal): Texture Scale
- *   -1 = Organic (high acousticness), +1 = Orchestral/Electronic (high instrumentalness)
- *
- * Z (Depth): Mood Scale
- *   +1 = Ethereal (high valence + low energy), -1 = Epic (high energy + high loudness)
- */
-
-const BPM_MIN = 60
-const BPM_MAX = 200
-const LOUDNESS_MIN = -60
-const LOUDNESS_MAX = 0
-
-/**
  * @param {Object} features - Spotify audio features
- * @param {number} features.tempo - BPM (60-200 typical)
- * @param {number} features.acousticness - 0-1
- * @param {number} features.instrumentalness - 0-1
- * @param {number} features.valence - 0-1 (happiness)
- * @param {number} features.energy - 0-1
- * @param {number} features.loudness - dB (-60 to 0)
+ * @param {number} features.tempo - BPM (60-180 typical)
+ * @param {number} features.acousticness - 0-1 (organic)
+ * @param {number} features.energy - 0-1 (electronic)
+ * @param {number} features.valence - 0-1 (happy/sad)
  * @returns {{ x: number, y: number, z: number }}
  */
 export function mapTrackToPosition(features) {
@@ -31,27 +18,32 @@ export function mapTrackToPosition(features) {
     return { x: 0, y: 0, z: 0 }
   }
 
-  const { tempo = 120, acousticness = 0.5, instrumentalness = 0.5, valence = 0.5, energy = 0.5, loudness = -10 } = features
+  const {
+    tempo = 120,
+    acousticness = 0.5,
+    energy = 0.5,
+    valence = 0.5,
+  } = features
 
-  // Y: BPM (tempo) - normalize to [-1, 1]
-  const y = Math.max(-1, Math.min(1, ((tempo - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 2 - 1))
+  // Y-Axis: Tempo 60-180 → -10 to +10
+  const clampedTempo = Math.max(60, Math.min(180, tempo))
+  const y = ((clampedTempo - 60) / (180 - 60)) * 20 - 10
 
-  // X: Organic (-1) vs Orchestral (+1)
-  // Organic = high acousticness (left), Orchestral = high instrumentalness (right)
-  const organicScore = acousticness
-  const orchestralScore = instrumentalness
-  const x = orchestralScore - organicScore
+  // X-Axis: Organic (acousticness > 0.5) = Left (-X), Electronic (energy > 0.8) = Right (+X)
+  // Combined: energy pushes right, acousticness pushes left
+  let x = 0
+  if (acousticness > 0.5) x -= (acousticness - 0.5) * 20
+  if (energy > 0.8) x += (energy - 0.8) * 50
+  if (x === 0) x = (energy - acousticness) * 10
+  x = Math.max(-15, Math.min(15, x))
 
-  // Z: Ethereal (+1) vs Epic (-1)
-  // Ethereal = high valence + low energy
-  // Epic = high energy + high loudness
-  const etherealScore = valence * (1 - energy)
-  const epicScore = energy * ((loudness - LOUDNESS_MIN) / (LOUDNESS_MAX - LOUDNESS_MIN))
-  const z = etherealScore - epicScore
+  // Z-Axis: Valence - High (>0.7) = Front (+Z), Low (<0.3) = Back (-Z)
+  const z = (valence - 0.5) * 20
+  const clampedZ = Math.max(-15, Math.min(15, z))
 
   return {
-    x: Math.max(-1, Math.min(1, x)),
-    y: Math.max(-1, Math.min(1, y)),
-    z: Math.max(-1, Math.min(1, z)),
+    x: Math.max(-15, Math.min(15, x)),
+    y: Math.max(-10, Math.min(10, y)),
+    z: clampedZ,
   }
 }

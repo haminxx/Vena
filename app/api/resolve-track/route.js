@@ -190,6 +190,7 @@ export async function POST(request) {
     const firstYt = Array.isArray(ytResults) ? ytResults[0] : null
     const albumImgs = spotifyTrack.album?.images ?? []
     const albumImage = albumImgs[0]?.url ?? null
+    const albumImageMedium = albumImgs[1]?.url ?? albumImgs[0]?.url ?? null
     const albumImageLowRes = albumImgs[2]?.url ?? albumImgs[1]?.url ?? albumImage ?? null
     const fallbackThumb = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? albumImage ?? null
 
@@ -201,6 +202,7 @@ export async function POST(request) {
       artistImageLarge: artistImageLarge ?? fallbackThumb,
       artistImageSmall: artistImageSmall ?? artistImageLarge ?? fallbackThumb,
       albumImage,
+      albumImageMedium,
       albumImageLowRes,
       spotifyId,
       artistId,

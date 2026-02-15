@@ -53,6 +53,7 @@ function metadataToTrack(meta) {
     artistImage: meta.artistImageSmall ?? meta.artistImageLarge ?? meta.thumbnail ?? null,
     artistImageLarge: meta.artistImageLarge ?? meta.thumbnail ?? null,
     albumImage: meta.albumImage ?? null,
+    albumImageMedium: meta.albumImageMedium ?? meta.albumImage ?? null,
     albumImageLowRes: meta.albumImageLowRes ?? meta.albumImage ?? null,
     previewUrl: meta.previewUrl ?? null,
     spotifyId: meta.spotifyId ?? null,

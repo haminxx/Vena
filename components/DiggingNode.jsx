@@ -1,21 +1,19 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Billboard, Html } from '@react-three/drei'
+import { Billboard, Html, Image } from '@react-three/drei'
 import * as THREE from 'three'
 
 const NODE_RADIUS = 0.25
 const HOVER_SCALE = 1.2
-const RING_RADIUS = 0.28
-const RING_TUBE = 0.02
 const FALLBACK_IMAGE = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="%23a78bfa" width="64" height="64"/><text x="32" y="38" font-size="24" fill="white" text-anchor="middle" font-family="sans-serif">?</text></svg>'
 )
 
 /**
- * 3D node: circular "token" with song album cover, always faces camera (Billboard).
- * Thin white Torus ring for "poker chip" / badge feel.
+ * 3D node: album art using drei Image, always faces camera (Billboard).
+ * Uses track.album.images[1] (medium) for performance.
  */
 export default function DiggingNode({
   track,
@@ -26,11 +24,9 @@ export default function DiggingNode({
   onPointerOut,
 }) {
   const groupRef = useRef()
-  const [texture, setTexture] = useState(null)
-  const textureRef = useRef(null)
   const targetScale = isHovered ? HOVER_SCALE : 1
 
-  const imageUrl = track.albumImageLowRes ?? track.albumImage ?? track.artistImage ?? track.image ?? FALLBACK_IMAGE
+  const imageUrl = track.albumImageMedium ?? track.albumImage ?? track.albumImageLowRes ?? track.artistImage ?? track.image ?? FALLBACK_IMAGE
   const songTitle = track.title ?? 'Song'
   const artistName = typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? 'Artist')
 
@@ -42,28 +38,6 @@ export default function DiggingNode({
       )
     }
   })
-
-  // useTexture can fail on remote URLs (CORS); TextureLoader handles loading robustly
-  useEffect(() => {
-    if (!imageUrl) return
-    const loader = new THREE.TextureLoader()
-    loader.load(
-      imageUrl,
-      (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace
-        textureRef.current = tex
-        setTexture(tex)
-      },
-      undefined,
-      () => setTexture(null)
-    )
-    return () => {
-      if (textureRef.current) {
-        textureRef.current.dispose()
-        textureRef.current = null
-      }
-    }
-  }, [imageUrl])
 
   const eventHandlers = {
     onClick: (e) => { e.stopPropagation(); onClick(track) },
@@ -83,29 +57,11 @@ export default function DiggingNode({
     <group ref={groupRef}>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <group {...eventHandlers}>
-          {/* Circular token with album cover */}
-          <mesh>
-            <circleGeometry args={[NODE_RADIUS, 32]} />
-            {texture ? (
-              <meshBasicMaterial
-                map={texture}
-                transparent
-                side={THREE.DoubleSide}
-              />
-            ) : (
-              <meshBasicMaterial
-                color="#a78bfa"
-                transparent
-                opacity={0.9}
-                side={THREE.DoubleSide}
-              />
-            )}
-          </mesh>
-          {/* Thin white ring - poker chip / badge feel */}
-          <mesh>
-            <torusGeometry args={[RING_RADIUS, RING_TUBE, 8, 32]} />
-            <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
-          </mesh>
+          <Image
+            url={imageUrl}
+            transparent
+            scale={[2, 2]}
+          />
         </group>
       </Billboard>
       {isHovered && !isSelected && (

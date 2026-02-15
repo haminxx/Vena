@@ -119,6 +119,34 @@ export default function BrowserLayout() {
   ]
   const showBreadcrumb = activeTab?.type === 'digging' && pathItems.length > 0
 
+  const handleBack = useCallback(() => {
+    if (!canGoBack) return
+    const targetIndex = currentIndex - 1
+    const histItem = history?.[targetIndex]
+    const focusId = histItem?.graphData?.id ?? histItem?.graphData?.spotifyId
+    if (focusId) {
+      const current = useAppStore.getState().diggingByTab[activeTabId]
+      if (current) {
+        setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
+      }
+    }
+    back()
+  }, [canGoBack, currentIndex, history, activeTabId, setDiggingState, back])
+
+  const handleForward = useCallback(() => {
+    if (!canGoForward) return
+    const targetIndex = currentIndex + 1
+    const histItem = history?.[targetIndex]
+    const focusId = histItem?.graphData?.id ?? histItem?.graphData?.spotifyId
+    if (focusId) {
+      const current = useAppStore.getState().diggingByTab[activeTabId]
+      if (current) {
+        setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
+      }
+    }
+    forward()
+  }, [canGoForward, currentIndex, history, activeTabId, setDiggingState, forward])
+
   const handleBreadcrumbClick = useCallback(
     (item) => {
       if (item.isHome) {
@@ -204,7 +232,7 @@ export default function BrowserLayout() {
       <div className={`flex items-center gap-2 px-4 py-2 border-b ${toolbarBg}`}>
         <div className="flex items-center gap-0.5">
           <button
-            onClick={back}
+            onClick={handleBack}
             disabled={!canGoBack}
             className={`p-2 rounded-full transition-colors ${canGoBack ? 'hover:bg-gray-200/50 text-gray-600' : 'text-gray-400 cursor-not-allowed'}`}
             aria-label="Back"
@@ -212,7 +240,7 @@ export default function BrowserLayout() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
-            onClick={forward}
+            onClick={handleForward}
             disabled={!canGoForward}
             className={`p-2 rounded-full transition-colors ${canGoForward ? 'hover:bg-gray-200/50 text-gray-600' : 'text-gray-400 cursor-not-allowed'}`}
             aria-label="Forward"
