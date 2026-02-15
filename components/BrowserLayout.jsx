@@ -36,20 +36,23 @@ export default function BrowserLayout() {
   const suggestionsRef = useRef(null)
   const inputRef = useRef(null)
 
-  const debouncedSearch = useDebounce(searchInput, 300)
+  const debouncedSearch = useDebounce(searchInput, 200)
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
 
-  const performSearch = useCallback(async (query, pushToHistory = false) => {
+  const performSearch = useCallback(async (query, pushToHistory = false, selectedItem = null) => {
     const q = (typeof query === 'string' ? query : searchInput).trim()
     if (!q) return
     setLoading(true)
     setError(null)
     try {
+      const body = selectedItem?.spotifyId && selectedItem?.type === 'track'
+        ? { spotifyId: selectedItem.spotifyId }
+        : { search: q }
       const res = await fetch('/api/resolve-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ search: q }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Search failed')
@@ -88,7 +91,7 @@ export default function BrowserLayout() {
       setSearchInput(item.query)
       setShowSuggestions(false)
       setSuggestions([])
-      performSearch(item.query, false)
+      performSearch(item.query, false, item)
     },
     [performSearch]
   )
@@ -102,7 +105,10 @@ export default function BrowserLayout() {
     fetch(`/api/search-suggestions?q=${encodeURIComponent(debouncedSearch)}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => setSuggestions(d.results ?? []))
-      .catch(() => setSuggestions([]))
+      .catch((err) => {
+        if (err.name === 'AbortError') return
+        setSuggestions([])
+      })
     return () => ctrl.abort()
   }, [debouncedSearch])
 
@@ -221,14 +227,23 @@ export default function BrowserLayout() {
             >
               {suggestions.map((item, i) => (
                 <button
-                  key={i}
+                  key={`${item.spotifyId ?? item.title}-${i}`}
                   onClick={() => handleSelectSuggestion(item)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-blue-500/20 transition-colors ${
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-blue-500/20 transition-colors flex items-center gap-3 ${
                     isDark ? 'text-gray-200' : 'text-gray-800'
                   }`}
                 >
-                  {item.title}
-                  {item.artist ? <span className="text-gray-500"> — {typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')}</span> : ''}
+                  {item.thumbnail && (
+                    <img src={item.thumbnail} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium truncate block">{item.title}</span>
+                    {item.artist && (
+                      <span className={`text-xs truncate block ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {item.artist}
+                      </span>
+                    )}
+                  </span>
                 </button>
               ))}
             </div>

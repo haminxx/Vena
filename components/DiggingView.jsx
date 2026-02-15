@@ -44,6 +44,7 @@ function metadataToTrack(meta) {
   if (!meta || typeof meta !== 'object') return null
   return {
     id: meta.spotifyId || meta.videoId || `track-${Date.now()}`,
+    videoId: meta.videoId ?? null,
     title: meta.title ?? '',
     artist: toArtistString(meta.artist),
     artistId: meta.artistId ?? null,
@@ -70,18 +71,23 @@ export default function DiggingView({
 
   const is3DActive = !!selectedTrack
 
-  const performSearch = useCallback(async (query) => {
+  const performSearch = useCallback(async (query, selectedItem = null) => {
     const q = (typeof query === 'string' ? query : searchInput).trim()
     if (!q) return
     setLoading(true)
     setError(null)
     try {
-      const { cleanQuery, filters } = parseSearchMetadata(q)
-      const searchPayload = cleanQuery || q
+      let body
+      if (selectedItem?.spotifyId && selectedItem?.type === 'track') {
+        body = { spotifyId: selectedItem.spotifyId }
+      } else {
+        const { cleanQuery, filters } = parseSearchMetadata(q)
+        body = { search: cleanQuery || q, filters: Object.keys(filters || {}).length ? filters : undefined }
+      }
       const res = await fetch('/api/resolve-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ search: searchPayload, filters: Object.keys(filters).length ? filters : undefined }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Search failed')
@@ -108,7 +114,7 @@ export default function DiggingView({
       const artistStr = typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')
       const query = item.query ?? [item.title, artistStr].filter(Boolean).join(' ')
       setSearchInput(query)
-      performSearch(query)
+      performSearch(query, item)
     },
     [performSearch]
   )

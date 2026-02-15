@@ -133,29 +133,26 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
   const controlsRef = useRef(null)
 
   const fetchSimilar = useCallback(async (track) => {
-    const seed = track.spotifyId || track.id
-    if (!seed || typeof seed !== 'string' || seed.startsWith('track-')) return
+    const videoId = track.videoId ?? null
+    const searchQuery = [track.title, typeof track.artist === 'string' ? track.artist : track.artist?.name].filter(Boolean).join(' ')
+    if (!videoId && !searchQuery) return
     setLoadingSimilar(true)
     try {
-      const res = await fetch(`/api/similar-tracks?seed=${encodeURIComponent(seed)}`)
+      const params = videoId
+        ? `videoId=${encodeURIComponent(videoId)}`
+        : `search=${encodeURIComponent(searchQuery)}`
+      const res = await fetch(`/api/related-tracks?${params}`)
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to fetch similar')
+      if (!res.ok) throw new Error(data.error ?? 'Failed to fetch related')
       const parentNode = nodes.find((n) => n.id === track.id)
       const parentPos = parentNode?.position ?? [0, 0, 0]
       const newNodes = []
       const newLinks = []
-      const tracks = (data.tracks ?? []).slice(0, 5)
-      for (let i = 0; i < tracks.length; i++) {
-        const t = tracks[i]
-        const existing = nodes.find((n) => n.id === t.id)
+      const relatedTracks = (data.tracks ?? []).slice(0, 5)
+      for (let i = 0; i < relatedTracks.length; i++) {
+        const t = relatedTracks[i]
+        const existing = nodes.find((n) => n.id === t.id || n.videoId === t.videoId)
         if (existing) continue
-        const pos = t.features
-          ? positionFromFeatures(t.features, parentPos, i)
-          : [
-              parentPos[0] + (Math.random() - 0.5) * CLUSTER_OFFSET * 2,
-              parentPos[1] + (Math.random() - 0.5) * CLUSTER_OFFSET * 2,
-              parentPos[2] + (Math.random() - 0.5) * CLUSTER_OFFSET * 2,
-            ]
         const newPos = [
           parentPos[0] + (Math.random() - 0.5) * 2,
           parentPos[1] + (Math.random() - 0.5) * 2,
@@ -163,13 +160,14 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
         ]
         newNodes.push({
           id: t.id,
+          videoId: t.videoId,
           title: t.title,
           artist: t.artist,
           artistId: t.artistId,
-          artistImage: t.image,
+          artistImage: t.artistImage ?? t.image ?? t.thumbnail,
           previewUrl: t.previewUrl,
-          spotifyId: t.id,
-          audioFeatures: t.features,
+          spotifyId: t.spotifyId,
+          audioFeatures: t.audioFeatures,
           position: newPos,
           parentId: track.id,
           topTracks: [],

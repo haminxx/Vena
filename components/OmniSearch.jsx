@@ -6,8 +6,7 @@ import { Search } from 'lucide-react'
 
 /**
  * Google-style autocomplete search bar with debounced suggestions.
- * State: inputValue, suggestions
- * Fetches from /api/search-suggestions with ~300ms debounce.
+ * Uses Spotify Web API for search. 200ms debounce, AbortController for request cancellation.
  */
 export default function OmniSearch({
   value = '',
@@ -25,14 +24,14 @@ export default function OmniSearch({
   const suggestionsRef = useRef(null)
   const inputRef = useRef(null)
 
-  const debouncedInput = useDebounce(inputValue, 300)
+  const debouncedInput = useDebounce(inputValue, 200)
 
   // Sync external value
   useEffect(() => {
     setInputValue(value)
   }, [value])
 
-  // Debounced fetch
+  // Debounced fetch with AbortController - cancels previous request when user keeps typing
   useEffect(() => {
     if (!debouncedInput || debouncedInput.length < 2) {
       setSuggestions([])
@@ -43,7 +42,10 @@ export default function OmniSearch({
     fetch(`/api/search-suggestions?q=${encodeURIComponent(debouncedInput)}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => setSuggestions(d.results ?? []))
-      .catch(() => setSuggestions([]))
+      .catch((err) => {
+        if (err.name === 'AbortError') return
+        setSuggestions([])
+      })
     return () => ctrl.abort()
   }, [debouncedInput])
 
@@ -151,11 +153,11 @@ export default function OmniSearch({
         >
           {suggestions.map((item, i) => (
             <button
-              key={i}
+              key={`${item.spotifyId ?? item.title}-${i}`}
               type="button"
               onClick={() => handleSelect(item)}
               onMouseEnter={() => setHighlightedIndex(i)}
-              className={`w-full text-left px-5 py-3 text-base transition-colors ${
+              className={`w-full text-left px-5 py-3 text-base transition-colors flex items-center gap-3 ${
                 i === highlightedIndex
                   ? dark
                     ? 'bg-blue-500/20 text-blue-300'
@@ -165,12 +167,21 @@ export default function OmniSearch({
                     : 'text-gray-800 hover:bg-gray-50'
               }`}
             >
-              {item.title}
-              {item.artist ? (
-                <span className={dark ? 'text-gray-400' : 'text-gray-500'}> — {typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')}</span>
-              ) : (
-                ''
+              {item.thumbnail && (
+                <img
+                  src={item.thumbnail}
+                  alt=""
+                  className="w-10 h-10 rounded object-cover shrink-0"
+                />
               )}
+              <span className="min-w-0 flex-1">
+                <span className="font-medium truncate block">{item.title}</span>
+                {item.artist && (
+                  <span className={`text-sm truncate block ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {item.artist}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </div>
