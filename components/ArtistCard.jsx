@@ -104,7 +104,7 @@ export default function ArtistCard({ track, onClose }) {
               <p className="text-xs text-gray-400 mt-1">Loading...</p>
             ) : genres.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {genres.slice(0, 4).map((g, i) => (
+                {genres.slice(0, 5).map((g, i) => (
                   <span
                     key={i}
                     className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/80 text-gray-700"
@@ -113,7 +113,11 @@ export default function ArtistCard({ track, onClose }) {
                   </span>
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/60 text-gray-500 italic">
+                Genre Undefined
+              </span>
+            )}
           </div>
         </div>
 

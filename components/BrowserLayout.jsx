@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette, Home } from 'lucide-react'
 import { useBrowserState } from '@/context/BrowserState'
 import { useTabHistory } from '@/hooks/useTabHistory'
+import { useAppStore } from '@/store/useAppStore'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useSpotifySearch } from '@/hooks/useSpotifySearch'
 import DiggingView from './DiggingView'
@@ -18,7 +19,11 @@ const TAB_LABELS = {
 
 export default function BrowserLayout() {
   const { tabs, activeTabId, setActiveTabId, addTab, setTabType, theme, setTheme } = useBrowserState()
+  const clearDiggingState = useAppStore((s) => s.clearDiggingState)
+  const setDiggingState = useAppStore((s) => s.setDiggingState)
   const {
+    history,
+    currentIndex,
     currentState,
     canGoBack,
     canGoForward,
@@ -27,6 +32,8 @@ export default function BrowserLayout() {
     push,
     replace,
     refresh,
+    goHome,
+    goToIndex,
   } = useTabHistory()
 
   const [searchInput, setSearchInput] = useState('')
@@ -86,6 +93,50 @@ export default function BrowserLayout() {
     const q = refresh()
     if (q) performSearch(q, false)
   }, [refresh, performSearch])
+
+  const handleHome = useCallback(() => {
+    clearDiggingState(activeTabId)
+    goHome()
+  }, [clearDiggingState, activeTabId, goHome])
+
+  const toBreadcrumbLabel = (item) => {
+    if (!item || (!item.query && !item.graphData)) return null
+    const g = item.graphData
+    if (g?.title) {
+      const artist = typeof g.artist === 'string' ? g.artist : g.artist?.name ?? ''
+      return artist ? `${artist} - ${g.title}` : g.title
+    }
+    return item.query || 'Search'
+  }
+
+  const historySlice = (history ?? []).slice(0, (currentIndex ?? 0) + 1)
+  const pathItems = historySlice
+    .map((item, i) => ({ index: i, label: toBreadcrumbLabel(item) }))
+    .filter((x) => x.label)
+  const breadcrumbItems = [
+    { index: -1, label: 'Home', isHome: true },
+    ...pathItems.map((x) => ({ ...x, isHome: false })),
+  ]
+  const showBreadcrumb = activeTab?.type === 'digging' && pathItems.length > 0
+
+  const handleBreadcrumbClick = useCallback(
+    (item) => {
+      if (item.isHome) {
+        handleHome()
+      } else {
+        goToIndex(item.index)
+        const histItem = history?.[item.index]
+        const focusId = histItem?.graphData?.id ?? histItem?.graphData?.spotifyId
+        if (focusId) {
+          const current = useAppStore.getState().diggingByTab[activeTabId]
+          if (current) {
+            setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
+          }
+        }
+      }
+    },
+    [handleHome, goToIndex, history, activeTabId, setDiggingState]
+  )
 
   const handleSelectSuggestion = useCallback(
     (item) => {
@@ -172,38 +223,68 @@ export default function BrowserLayout() {
             onClick={handleRefresh}
             disabled={!currentState?.query}
             className={`p-2 rounded-full transition-colors ${currentState?.query ? 'hover:bg-gray-200/50 text-gray-600' : 'text-gray-400 cursor-not-allowed'}`}
-            aria-label="Refresh"
+            aria-label="Reload"
           >
             <RotateCw className="w-4 h-4" />
           </button>
+          <button
+            onClick={handleHome}
+            className="p-2 rounded-full transition-colors hover:bg-gray-200/50 text-gray-600"
+            aria-label="Home"
+          >
+            <Home className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Omnibox with autocomplete */}
-        <div className="flex-1 relative">
-          <form
-            className={`flex items-center gap-2 rounded-full pl-4 pr-3 py-2 border transition-colors ${inputBg} focus-within:ring-2 focus-within:ring-blue-500`}
-            onSubmit={(e) => {
-              e.preventDefault()
-              performSearch(searchInput, false)
-              setShowSuggestions(false)
-            }}
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value)
-                setShowSuggestions(true)
+        {/* Domain Bar: Breadcrumb or Omnibox */}
+        <div className="flex-1 relative flex items-center min-w-0">
+          {showBreadcrumb ? (
+            <div
+              className={`flex items-center gap-1 flex-wrap py-2 px-3 rounded-full border ${inputBg} min-w-0 overflow-hidden`}
+              style={{ maxWidth: '100%' }}
+            >
+              {breadcrumbItems.map((item, i) => (
+                <span key={item.isHome ? 'home' : item.index} className="flex items-center gap-1 shrink-0">
+                  {i > 0 && (
+                    <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>&gt;</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleBreadcrumbClick(item)}
+                    className={`text-sm truncate max-w-[140px] hover:underline ${isDark ? 'text-gray-200 hover:text-white' : 'text-gray-800 hover:text-gray-900'}`}
+                    title={item.label}
+                  >
+                    {item.label}
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <form
+              className={`flex items-center gap-2 rounded-full pl-4 pr-3 py-2 border transition-colors flex-1 min-w-0 ${inputBg} focus-within:ring-2 focus-within:ring-blue-500`}
+              onSubmit={(e) => {
+                e.preventDefault()
+                performSearch(searchInput, false)
+                setShowSuggestions(false)
               }}
-              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              placeholder="Search for a track..."
-              className={`flex-1 bg-transparent border-none outline-none text-sm min-w-0 ${isDark ? 'text-gray-200 placeholder-gray-500' : 'text-gray-800 placeholder-gray-400'}`}
-              disabled={loading}
-            />
-          </form>
+            >
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchInput}
+                onChange={(e) => {
+                  setSearchInput(e.target.value)
+                  setShowSuggestions(true)
+                }}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                placeholder="Search for a track..."
+                className={`flex-1 bg-transparent border-none outline-none text-sm min-w-0 ${isDark ? 'text-gray-200 placeholder-gray-500' : 'text-gray-800 placeholder-gray-400'}`}
+                disabled={loading}
+              />
+            </form>
+          )}
 
-          {showSuggestions && suggestions.length > 0 && (
+          {!showBreadcrumb && showSuggestions && suggestions.length > 0 && (
             <div
               ref={suggestionsRef}
               className={`absolute top-full left-0 right-0 mt-1 rounded-lg shadow-lg border overflow-hidden z-50 ${
@@ -267,6 +348,15 @@ export default function BrowserLayout() {
                     graphData: track,
                   }
                   replace(state)
+                }
+              }}
+              onExpandNode={(track) => {
+                if (track) {
+                  const state = {
+                    query: [track.title, track.artist].filter(Boolean).join(' '),
+                    graphData: track,
+                  }
+                  push(state)
                 }
               }}
             />

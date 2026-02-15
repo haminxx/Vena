@@ -12,6 +12,7 @@ import DiggingNode, { NODE_RADIUS } from './DiggingNode'
 import ArtistCard from './ArtistCard'
 import NodeActionMenu from './NodeActionMenu'
 import AxisGuides from './AxisGuides'
+import { useAppStore } from '@/store/useAppStore'
 
 const CUBE_SIZE = 6
 const CLUSTER_OFFSET = 0.8
@@ -147,18 +148,20 @@ function Scene({
   )
 }
 
-export default function DiggingCube({ dark = false, initialTrack, onBack }) {
+export default function DiggingCube({ dark = false, tabId, initialTrack, persistedNodes, persistedLinks, focusNodeId, onBack, onExpandNode }) {
   const { setHoverTrack } = useMoodBackground()
   const { play } = useAudioPreview()
+  const setDiggingState = useAppStore((s) => s.setDiggingState)
 
   const [nodes, setNodes] = useState(() => {
+    if (persistedNodes?.length > 0) return persistedNodes
     if (!initialTrack) return []
     const pos = initialTrack.audioFeatures
       ? positionFromFeatures(initialTrack.audioFeatures, [0, 0, 0], 0)
       : [0, 0, 0]
     return [{ ...initialTrack, position: pos, parentId: null }]
   })
-  const [links, setLinks] = useState([])
+  const [links, setLinks] = useState(() => persistedLinks ?? [])
   const [selectedNodeId, setSelectedNodeId] = useState(null)
   const [showCardTrackId, setShowCardTrackId] = useState(null)
   const [hoveredTrack, setHoveredTrack] = useState(null)
@@ -171,6 +174,23 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
       controlsRef.current.setLookAt(6, 6, 6, 0, 0, 0, true)
     }
   }, [initialTrack?.id])
+
+  useEffect(() => {
+    if (focusNodeId && controlsRef.current && nodes.length > 0) {
+      const node = nodes.find((n) => n.id === focusNodeId || n.spotifyId === focusNodeId)
+      if (node?.position) {
+        const [x, y, z] = Array.isArray(node.position) ? node.position : [0, 0, 0]
+        controlsRef.current.setLookAt(x + 2, y + 2, z + 2, x, y, z, true)
+      }
+    }
+  }, [focusNodeId, nodes])
+
+  useEffect(() => {
+    if (tabId && nodes.length > 0) {
+      const prev = useAppStore.getState().diggingByTab[tabId]
+      setDiggingState(tabId, { ...prev, nodes, links })
+    }
+  }, [tabId, nodes, links, setDiggingState])
 
   const fetchSimilar = useCallback(async (track) => {
     const videoId = track.videoId ?? null
@@ -237,9 +257,10 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
   const handleExpand = useCallback(
     (track) => {
       setSelectedNodeId(null)
+      onExpandNode?.(track)
       fetchSimilar(track)
     },
-    [fetchSimilar]
+    [fetchSimilar, onExpandNode]
   )
 
   const handleAbout = useCallback((track) => {
@@ -256,7 +277,7 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
     setHoverTrack(hoveredTrack ?? null)
   }, [hoveredTrack, setHoverTrack])
 
-  if (!initialTrack && nodes.length === 0) {
+  if (!initialTrack && !persistedNodes?.length && nodes.length === 0) {
     return null
   }
 

@@ -5,6 +5,8 @@ import { TrendingUp } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { parseSearchMetadata } from '@/utils/parseSearchMetadata'
 import OmniSearch from './OmniSearch'
+import { useBrowserState } from '@/context/BrowserState'
+import { useAppStore } from '@/store/useAppStore'
 
 const DiggingCube = dynamic(() => import('./DiggingCube'), {
   ssr: false,
@@ -51,6 +53,7 @@ function metadataToTrack(meta) {
     artistImage: meta.artistImageSmall ?? meta.artistImageLarge ?? meta.thumbnail ?? null,
     artistImageLarge: meta.artistImageLarge ?? meta.thumbnail ?? null,
     albumImage: meta.albumImage ?? null,
+    albumImageLowRes: meta.albumImageLowRes ?? meta.albumImage ?? null,
     previewUrl: meta.previewUrl ?? null,
     spotifyId: meta.spotifyId ?? null,
     audioFeatures: meta.audioFeatures ?? null,
@@ -59,10 +62,16 @@ function metadataToTrack(meta) {
 
 export default function DiggingView({
   onSelectTrack,
+  onExpandNode,
   dark = false,
   initialQuery = '',
   initialGraphData = null,
 }) {
+  const { activeTabId } = useBrowserState()
+  const diggingByTab = useAppStore((s) => s.diggingByTab)
+  const persisted = diggingByTab[activeTabId]
+  const hasPersistedGraph = (persisted?.nodes?.length ?? 0) > 0
+
   const [searchInput, setSearchInput] = useState(initialQuery)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -71,7 +80,7 @@ export default function DiggingView({
   )
   const [recentSearches, setRecentSearches] = useState([])
 
-  const is3DActive = !!selectedTrack
+  const is3DActive = hasPersistedGraph || !!selectedTrack
 
   const performSearch = useCallback(async (query, selectedItem = null) => {
     const q = (typeof query === 'string' ? query : searchInput).trim()
@@ -128,8 +137,10 @@ export default function DiggingView({
   useEffect(() => {
     if (initialGraphData?.spotifyId || initialGraphData?.videoId) {
       setSelectedTrack(metadataToTrack(initialGraphData))
+    } else if (!hasPersistedGraph) {
+      setSelectedTrack(null)
     }
-  }, [initialGraphData?.spotifyId, initialGraphData?.videoId])
+  }, [initialGraphData?.spotifyId, initialGraphData?.videoId, hasPersistedGraph])
 
   const textClass = dark ? 'text-gray-200' : 'text-gray-800'
   const mutedClass = dark ? 'text-gray-400' : 'text-gray-500'
@@ -141,8 +152,16 @@ export default function DiggingView({
       <div className="absolute inset-0 w-full h-full flex flex-col">
         <DiggingCube
           dark={dark}
-          initialTrack={selectedTrack}
-          onBack={() => setSelectedTrack(null)}
+          tabId={activeTabId}
+          initialTrack={hasPersistedGraph ? null : selectedTrack}
+          persistedNodes={persisted?.nodes}
+          persistedLinks={persisted?.links}
+          focusNodeId={persisted?.focusNodeId}
+          onBack={() => {
+            setSelectedTrack(null)
+            useAppStore.getState().clearDiggingState(activeTabId)
+          }}
+          onExpandNode={onExpandNode}
         />
       </div>
     )

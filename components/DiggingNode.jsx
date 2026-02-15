@@ -30,7 +30,7 @@ export default function DiggingNode({
   const textureRef = useRef(null)
   const targetScale = isHovered ? HOVER_SCALE : 1
 
-  const imageUrl = track.albumImage ?? track.artistImage ?? track.image ?? FALLBACK_IMAGE
+  const imageUrl = track.albumImageLowRes ?? track.albumImage ?? track.artistImage ?? track.image ?? FALLBACK_IMAGE
   const songTitle = track.title ?? 'Song'
   const artistName = typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? 'Artist')
 

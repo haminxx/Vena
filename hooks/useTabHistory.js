@@ -64,6 +64,23 @@ export function useTabHistory() {
     return currentState.query
   }, [activeTabId, currentState])
 
+  const goHome = useCallback(() => {
+    if (!activeTabId) return
+    updateTab(activeTabId, (t) => ({
+      ...t,
+      history: [{ query: '', graphData: null }],
+      currentIndex: 0,
+    }))
+  }, [activeTabId, updateTab])
+
+  const goToIndex = useCallback(
+    (index) => {
+      if (!activeTabId || index < 0 || index >= history.length) return
+      updateTab(activeTabId, (t) => ({ ...t, currentIndex: index }))
+    },
+    [activeTabId, history.length, updateTab]
+  )
+
   return {
     history,
     currentIndex,
@@ -75,5 +92,7 @@ export function useTabHistory() {
     push,
     replace,
     refresh,
+    goHome,
+    goToIndex,
   }
 }
