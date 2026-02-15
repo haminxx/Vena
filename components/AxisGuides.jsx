@@ -66,11 +66,6 @@ export default function AxisGuides() {
       {/* Z Axis: Blue */}
       <AxisLine start={[0, 0, -L]} end={[0, 0, L]} color="#1e88e5" />
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Html position={[0, 0, L + LABEL_OFFSET]} center style={labelStyle}>
-          <span>Ethereal</span>
-        </Html>
-      </Billboard>
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <Html position={[0, 0, -L - LABEL_OFFSET]} center style={labelStyle}>
           <span>Epic</span>
         </Html>

@@ -197,7 +197,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       const pos = initialTrack.audioFeatures
         ? mapTrackToPosition(initialTrack.audioFeatures)
         : { x: 0, y: 0, z: 0 }
-      const offset = 4
+      const offset = 5
       controlsRef.current.setLookAt(pos.x + offset, pos.y + offset, pos.z + offset, pos.x, pos.y, pos.z, true)
     }
   }, [initialTrack?.id])
