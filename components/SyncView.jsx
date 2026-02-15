@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { Loader2 } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/store/useAppStore'
 import { useStrudelTrigger } from '@/hooks/useStrudelTrigger'
 import { useAudioPlayer } from '@/context/AudioPlayerContext'
@@ -67,17 +68,19 @@ export async function initStrudel() {
 let strudelInitialized = false
 
 export default function SyncView({ dark = false }) {
-  const savedTracks = useAppStore((s) => {
-    const diggingTabs = s.tabs.filter((t) => t.type === 'digging')
-    const all = diggingTabs.flatMap((t) => t?.data?.savedTracks ?? [])
-    const seen = new Set()
-    return all.filter((x) => {
-      const id = x?.id ?? x?.spotifyId
-      if (id && seen.has(id)) return false
-      if (id) seen.add(id)
-      return true
+  const savedTracks = useAppStore(
+    useShallow((s) => {
+      const diggingTabs = s.tabs.filter((t) => t.type === 'digging')
+      const all = diggingTabs.flatMap((t) => t?.data?.savedTracks ?? [])
+      const seen = new Set()
+      return all.filter((x) => {
+        const id = x?.id ?? x?.spotifyId
+        if (id && seen.has(id)) return false
+        if (id) seen.add(id)
+        return true
+      })
     })
-  })
+  )
   const syncIsPlaying = useAppStore((s) => s.syncIsPlaying)
   const [ready, setReady] = useState(false)
   const [processing, setProcessing] = useState(false)

@@ -5,6 +5,8 @@ import { Bookmark, Music, Youtube } from 'lucide-react'
 import { useBrowserState } from '@/context/BrowserState'
 import { useAppStore } from '@/store/useAppStore'
 
+const EMPTY_ARRAY = []
+
 function getSpotifyUrl(track) {
   const id = track?.spotifyId ?? track?.id
   if (!id) return null
@@ -21,7 +23,7 @@ export default function TabSavedMenu({ dark = false }) {
   const { activeTabId } = useBrowserState()
   const savedTracks = useAppStore((s) => {
     const t = s.tabs.find((x) => x.id === activeTabId)
-    return t?.data?.savedTracks ?? []
+    return t?.data?.savedTracks ?? EMPTY_ARRAY
   })
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)

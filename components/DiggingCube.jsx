@@ -14,6 +14,7 @@ import NodeActionMenu from './NodeActionMenu'
 import AxisGuides from './AxisGuides'
 import { useAppStore } from '@/store/useAppStore'
 
+const EMPTY_ARRAY = []
 
 const CLUSTER_OFFSET = 0.8
 
@@ -172,7 +173,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
   })
   const savedTracks = useAppStore((s) => {
     const t = s.tabs.find((x) => x.id === tabId)
-    return t?.data?.savedTracks ?? []
+    return t?.data?.savedTracks ?? EMPTY_ARRAY
   })
   const saveTrackToTab = useAppStore((s) => s.saveTrackToTab)
   const { setHoverTrack, setAlbumColorFromImage } = useMoodBackground()
@@ -312,7 +313,12 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   const activeNodeId = focusNodeId ?? diggingState?.focusNodeId ?? selectedNodeId ?? showCardTrackId
 
+  const prevMoodRef = useRef({ hoveredTrack: undefined, selectedNodeId: undefined, showCardTrackId: undefined })
   useEffect(() => {
+    const prev = prevMoodRef.current
+    const same = prev.hoveredTrack === hoveredTrack && prev.selectedNodeId === selectedNodeId && prev.showCardTrackId === showCardTrackId
+    prevMoodRef.current = { hoveredTrack, selectedNodeId, showCardTrackId }
+    if (same) return
     setHoverTrack(hoveredTrack ?? null)
     if (!hoveredTrack && !selectedNodeId && !showCardTrackId) {
       setAlbumColorFromImage(null)

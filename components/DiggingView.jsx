@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { parseSearchMetadata } from '@/utils/parseSearchMetadata'
 import OmniSearch from './OmniSearch'
 import TabSavedMenu from './TabSavedMenu'
+import { useShallow } from 'zustand/react/shallow'
 import { useBrowserState } from '@/context/BrowserState'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -74,15 +75,17 @@ export default function DiggingView({
   initialGraphData = null,
 }) {
   const { activeTabId } = useBrowserState()
-  const tabData = useAppStore((s) => {
-    const t = s.tabs.find((x) => x.id === activeTabId)
-    const d = t?.data ?? {}
-    return {
-      nodes: d.graphNodes ?? [],
-      links: d.graphLinks ?? [],
-      focusNodeId: d.focusNodeId ?? null,
-    }
-  })
+  const tabData = useAppStore(
+    useShallow((s) => {
+      const t = s.tabs.find((x) => x.id === activeTabId)
+      const d = t?.data ?? {}
+      return {
+        nodes: d.graphNodes ?? [],
+        links: d.graphLinks ?? [],
+        focusNodeId: d.focusNodeId ?? null,
+      }
+    })
+  )
   const persisted = tabData
   const hasPersistedGraph = (persisted?.nodes?.length ?? 0) > 0
 
