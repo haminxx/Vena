@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import { Loader2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { useStrudelTrigger } from '@/hooks/useStrudelTrigger'
 import { useAudioPlayer } from '@/context/AudioPlayerContext'
@@ -69,8 +70,34 @@ export default function SyncView({ dark = false }) {
   const savedTracks = useAppStore((s) => s.savedTracks) ?? []
   const syncIsPlaying = useAppStore((s) => s.syncIsPlaying)
   const [ready, setReady] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const [processingError, setProcessingError] = useState(null)
+  const [activeRemix, setActiveRemix] = useState(null)
   const { play: playSpotify, stop: stopSpotify } = useAudioPlayer()
   useStrudelTrigger()
+
+  const handleTrackSelect = useCallback(async (track) => {
+    const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
+    const trackName = track?.title ?? ''
+    if (!artist || !trackName) return
+    setProcessing(true)
+    setProcessingError(null)
+    setActiveRemix(null)
+    try {
+      const res = await fetch('/api/split-stems', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ artist, track: trackName }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? data.detail ?? 'Stem split failed')
+      setActiveRemix({ stems: data, track: { artist, title: trackName } })
+    } catch (err) {
+      setProcessingError(err.message)
+    } finally {
+      setProcessing(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!ready) return
@@ -88,7 +115,6 @@ export default function SyncView({ dark = false }) {
     }
     run()
   }, [syncIsPlaying, ready, stopSpotify])
-  const [replRef, setReplRef] = useState(null)
 
   useEffect(() => {
     if (strudelInitialized) {
@@ -101,21 +127,17 @@ export default function SyncView({ dark = false }) {
     })
   }, [])
 
-  const handleSelectTrack = useCallback(async (track) => {
+  const handleBpmSync = useCallback(async (track) => {
     const bpm = track?.bpm ?? track?.audioFeatures?.tempo ?? 120
     const cpm = bpm / 4
     try {
       const webaudio = await import('@strudel.cycles/webaudio')
       const sched = webaudio.getScheduler?.()
-      if (sched?.setCps) {
-        sched.setCps(cpm / 60)
-      }
+      if (sched?.setCps) sched.setCps(cpm / 60)
     } catch {
       try {
         const scope = await import('@strudel.cycles/core')
-        if (scope.eval) {
-          scope.eval(`setcpm(${cpm})`)
-        }
+        if (scope.eval) scope.eval(`setcpm(${cpm})`)
       } catch {}
     }
   }, [])
@@ -149,8 +171,12 @@ export default function SyncView({ dark = false }) {
                 return (
                   <li key={track?.id ?? track?.spotifyId ?? name}>
                     <button
-                      onClick={() => handleSelectTrack(track)}
-                      className={`w-full text-left px-2 py-2 rounded text-xs ${text} ${hoverBg} transition-colors`}
+                      onClick={() => {
+                        handleBpmSync(track)
+                        handleTrackSelect(track)
+                      }}
+                      disabled={processing}
+                      className={`w-full text-left px-2 py-2 rounded text-xs ${text} ${hoverBg} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       <div className="truncate font-medium">{name}</div>
                       <div className={`truncate ${muted}`}>{artist}</div>
@@ -164,11 +190,32 @@ export default function SyncView({ dark = false }) {
         </div>
       </div>
 
-      {/* MiniRepl - DevTools console style */}
+      {/* Main Stage: Remix Deck + MiniRepl */}
       <div className={`flex-1 flex flex-col min-w-0 ${isDark ? 'bg-[#1e1e1e]' : 'bg-[#fff]'}`}>
         <div className={`px-3 py-2 border-b ${border} font-mono text-xs ${muted}`}>
           Strudel REPL — Write patterns (e.g. s(&quot;bd hh&quot;)) and evaluate with Ctrl+Enter
         </div>
+        {processing && (
+          <div className={`flex items-center gap-2 px-4 py-3 border-b ${border} ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Processing stems (yt-dlp + Demucs)...</span>
+          </div>
+        )}
+        {processingError && (
+          <div className="px-4 py-2 bg-red-500/10 text-red-600 text-sm border-b border-red-200">
+            {processingError}
+          </div>
+        )}
+        {activeRemix && !processing && (
+          <div className={`px-4 py-2 border-b ${border} ${isDark ? 'bg-gray-800/30' : 'bg-gray-50'}`}>
+            <p className="text-xs font-medium text-green-600">
+              Remix Deck: {activeRemix.track?.artist} — {activeRemix.track?.title}
+            </p>
+            <p className="text-[10px] text-gray-500 mt-0.5">
+              Stems ready: vocals, drums, bass, other
+            </p>
+          </div>
+        )}
         <div className="flex-1 min-h-[300px] overflow-hidden">
           {ready && (
             <div className="h-full w-full [&_.cm-editor]:h-full [&_.cm-scroller]:overflow-auto">
