@@ -50,6 +50,7 @@ function metadataToTrack(meta) {
     artistId: meta.artistId ?? null,
     artistImage: meta.artistImageSmall ?? meta.artistImageLarge ?? meta.thumbnail ?? null,
     artistImageLarge: meta.artistImageLarge ?? meta.thumbnail ?? null,
+    albumImage: meta.albumImage ?? null,
     previewUrl: meta.previewUrl ?? null,
     spotifyId: meta.spotifyId ?? null,
     audioFeatures: meta.audioFeatures ?? null,
@@ -156,6 +157,7 @@ export default function DiggingView({
         <OmniSearch
           value={searchInput}
           onChange={setSearchInput}
+          onSelect={handleSelectSuggestion}
           onSelectSuggestion={handleSelectSuggestion}
           onSubmit={performSearch}
           placeholder="Search for a track, artist, or mood..."

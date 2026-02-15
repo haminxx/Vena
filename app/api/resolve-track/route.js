@@ -188,7 +188,8 @@ export async function POST(request) {
     }
 
     const firstYt = Array.isArray(ytResults) ? ytResults[0] : null
-    const fallbackThumb = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? spotifyTrack.album?.images?.[0]?.url ?? null
+    const albumImage = spotifyTrack.album?.images?.[0]?.url ?? null
+    const fallbackThumb = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? albumImage ?? null
 
     const youtube_metadata = {
       title,
@@ -197,6 +198,7 @@ export async function POST(request) {
       thumbnail: artistImageSmall ?? artistImageLarge ?? fallbackThumb,
       artistImageLarge: artistImageLarge ?? fallbackThumb,
       artistImageSmall: artistImageSmall ?? artistImageLarge ?? fallbackThumb,
+      albumImage,
       spotifyId,
       artistId,
       previewUrl,

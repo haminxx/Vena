@@ -158,6 +158,12 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
   const [loadingSimilar, setLoadingSimilar] = useState(false)
   const controlsRef = useRef(null)
 
+  useEffect(() => {
+    if (initialTrack && controlsRef.current) {
+      controlsRef.current.setLookAt(6, 6, 6, 0, 0, 0, true)
+    }
+  }, [initialTrack?.id])
+
   const fetchSimilar = useCallback(async (track) => {
     const videoId = track.videoId ?? null
     const searchQuery = [track.title, typeof track.artist === 'string' ? track.artist : track.artist?.name].filter(Boolean).join(' ')
@@ -191,6 +197,7 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
           artist: t.artist,
           artistId: t.artistId,
           artistImage: t.artistImage ?? t.image ?? t.thumbnail,
+          albumImage: t.albumImage ?? t.artistImage ?? t.image ?? t.thumbnail,
           previewUrl: t.previewUrl,
           spotifyId: t.spotifyId,
           audioFeatures: t.audioFeatures,

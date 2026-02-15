@@ -12,6 +12,7 @@ import { Search } from 'lucide-react'
 export default function OmniSearch({
   value = '',
   onChange,
+  onSelect,
   onSelectSuggestion,
   onSubmit,
   placeholder = 'Search for a track, artist, or mood...',
@@ -47,13 +48,13 @@ export default function OmniSearch({
       const artistStr = typeof item.artist === 'string' ? item.artist : (item.artist?.name ?? '')
       const displayText = item.query ?? [item.title, artistStr].filter(Boolean).join(' ')
       setInputValue(displayText)
-      setSuggestions([])
       setHighlightedIndex(-1)
       onChange?.(displayText)
+      onSelect?.(item)
       onSelectSuggestion?.(item)
-      onSubmit?.(displayText)
+      if (!onSelect && !onSelectSuggestion) onSubmit?.(displayText)
     },
-    [onChange, onSelectSuggestion, onSubmit]
+    [onChange, onSelect, onSelectSuggestion, onSubmit]
   )
 
   const handleSubmit = useCallback(

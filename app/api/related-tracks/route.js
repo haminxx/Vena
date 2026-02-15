@@ -54,6 +54,7 @@ export async function GET(request) {
         title: r.title ?? r.name ?? '',
         artist,
         artistImage: thumb,
+        albumImage: thumb,
         thumbnail: thumb,
         spotifyId: null,
         audioFeatures: null,

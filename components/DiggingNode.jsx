@@ -30,7 +30,8 @@ export default function DiggingNode({
   const textureRef = useRef(null)
   const targetScale = isHovered ? HOVER_SCALE : 1
 
-  const imageUrl = track.artistImage ?? track.image ?? FALLBACK_IMAGE
+  const imageUrl = track.albumImage ?? track.artistImage ?? track.image ?? FALLBACK_IMAGE
+  const songTitle = track.title ?? 'Song'
   const artistName = typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? 'Artist')
 
   useFrame(() => {
@@ -111,22 +112,23 @@ export default function DiggingNode({
         <Html
           position={[0, NODE_RADIUS + 0.15, 0]}
           center
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: 'none', textAlign: 'center' }}
         >
-          <span
+          <div
             style={{
               whiteSpace: 'nowrap',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 600,
               color: 'white',
               textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-              padding: '4px 8px',
+              padding: '6px 10px',
               borderRadius: '6px',
               backgroundColor: 'rgba(0,0,0,0.6)',
             }}
           >
-            {artistName}
-          </span>
+            <div style={{ display: 'block', marginBottom: '2px' }}>{songTitle}</div>
+            <div style={{ fontSize: '10px', fontWeight: 400, opacity: 0.9 }}>{artistName}</div>
+          </div>
         </Html>
       )}
     </group>
