@@ -215,7 +215,8 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   useEffect(() => {
     if (tabId && nodes.length > 0) {
-      const prev = useAppStore.getState().diggingByTab[tabId]
+      const tab = useAppStore.getState().tabs.find((t) => t.id === tabId)
+      const prev = tab?.graphState ?? {}
       setDiggingState(tabId, { ...prev, nodes, links })
     }
   }, [tabId, nodes, links, setDiggingState])
