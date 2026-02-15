@@ -14,6 +14,9 @@ import NodeActionMenu from './NodeActionMenu'
 import AxisGuides from './AxisGuides'
 import { useAppStore } from '@/store/useAppStore'
 
+const useSavedTracks = () => useAppStore((s) => s.savedTracks)
+const useAddSavedTrack = () => useAppStore((s) => s.addSavedTrack)
+
 const CLUSTER_OFFSET = 0.8
 
 const CAMERA_PRESETS = {
@@ -67,6 +70,8 @@ function Scene({
   onHover,
   onUnhover,
   onExtractColor,
+  activeNodeId,
+  lastTriggerTime,
 }) {
   return (
     <>
@@ -104,6 +109,8 @@ function Scene({
               onPointerOver={onHover}
               onPointerOut={onUnhover}
               onExtractColor={onExtractColor}
+              isActiveNode={activeNodeId === track.id || activeNodeId === track.spotifyId}
+              lastTriggerTime={lastTriggerTime}
             />
             {isMenuOpen && !isCardOpen && (
               <Billboard follow lockX={false} lockY={false} lockZ={false}>
@@ -119,8 +126,10 @@ function Scene({
                       onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
+                      onSave={() => addSavedTrack(track)}
                       onClose={onClose}
                       hasPreview={!!track?.previewUrl}
+                      isSaved={savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))}
                     />
                   </div>
                 </Html>
@@ -149,7 +158,12 @@ function Scene({
 }
 
 export default function DiggingCube({ dark = false, tabId, initialTrack, persistedNodes, persistedLinks, focusNodeId, onBack, onExpandNode }) {
+  const lastTriggerTime = useAppStore((s) => s.lastTriggerTime)
+  const activeTabId = useAppStore((s) => s.activeTabId)
+  const diggingState = useAppStore((s) => s.diggingByTab[activeTabId])
   const { setHoverTrack, setAlbumColorFromImage } = useMoodBackground()
+  const savedTracks = useSavedTracks()
+  const addSavedTrack = useAddSavedTrack()
   const { play } = useAudioPlayer()
   const setDiggingState = useAppStore((s) => s.setDiggingState)
 
@@ -279,6 +293,8 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     setShowCardTrackId(null)
   }, [])
 
+  const activeNodeId = focusNodeId ?? diggingState?.focusNodeId ?? selectedNodeId ?? showCardTrackId
+
   useEffect(() => {
     setHoverTrack(hoveredTrack ?? null)
     if (!hoveredTrack && !selectedNodeId && !showCardTrackId) {
@@ -336,6 +352,8 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           onHover={setHoveredTrack}
           onUnhover={() => setHoveredTrack(null)}
           onExtractColor={setAlbumColorFromImage}
+          activeNodeId={activeNodeId}
+          lastTriggerTime={lastTriggerTime}
         />
       </Canvas>
 

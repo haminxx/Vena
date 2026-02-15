@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette, Home } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette, Home, Play, Square } from 'lucide-react'
 import { useBrowserState } from '@/context/BrowserState'
 import { useTabHistory } from '@/hooks/useTabHistory'
 import { useAppStore } from '@/store/useAppStore'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useSpotifySearch } from '@/hooks/useSpotifySearch'
 import DiggingView from './DiggingView'
+import SyncView from './SyncView'
 import NewTabPage from './NewTabPage'
 
 const TAB_LABELS = {
@@ -262,6 +263,26 @@ export default function BrowserLayout() {
           >
             <Home className="w-4 h-4" />
           </button>
+          {activeTab?.type === 'syncing' && (
+            <>
+              <button
+                onClick={() => useAppStore.getState().setSyncPlaying(true)}
+                className="p-2 rounded-full transition-colors hover:bg-gray-200/50 text-gray-600"
+                aria-label="Play Sync"
+                title="Play Strudel + Spotify"
+              >
+                <Play className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => useAppStore.getState().setSyncPlaying(false)}
+                className="p-2 rounded-full transition-colors hover:bg-gray-200/50 text-gray-600"
+                aria-label="Stop Sync"
+                title="Stop Strudel + Spotify"
+              >
+                <Square className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Domain Bar: Breadcrumb or Omnibox */}
@@ -391,9 +412,8 @@ export default function BrowserLayout() {
           </div>
         )}
         {activeTab?.type === 'syncing' && (
-          <div className="flex-1 flex flex-col p-6 max-w-4xl mx-auto w-full">
-            <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>Syncing</h2>
-            <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>Audio Visualizer view.</p>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <SyncView dark={isDark} />
           </div>
         )}
       </div>

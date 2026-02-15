@@ -67,6 +67,46 @@ function createNavigationSlice(set, get) {
 }
 
 /**
+ * savedTracksSlice: Tracks saved from Digging for use in Sync tab.
+ */
+function createSavedTracksSlice(set) {
+  return {
+    savedTracks: [],
+
+    addSavedTrack: (track) =>
+      set((s) => {
+        const exists = s.savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))
+        if (exists) return s
+        const bpm = track?.audioFeatures?.tempo ?? 120
+        return { savedTracks: [...s.savedTracks, { ...track, bpm }] }
+      }),
+
+    removeSavedTrack: (trackId) =>
+      set((s) => ({ savedTracks: s.savedTracks.filter((t) => (t.id ?? t.spotifyId) !== trackId) })),
+  }
+}
+
+/**
+ * strudelTriggerSlice: Receives beat triggers from Strudel for graph pulse.
+ */
+function createStrudelTriggerSlice(set) {
+  return {
+    lastTriggerTime: 0,
+    setStrudelTrigger: () => set({ lastTriggerTime: Date.now() }),
+  }
+}
+
+/**
+ * syncPlaybackSlice: Play/Stop state for Sync tab (Strudel + Spotify).
+ */
+function createSyncPlaybackSlice(set) {
+  return {
+    syncIsPlaying: false,
+    setSyncPlaying: (playing) => set({ syncIsPlaying: !!playing }),
+  }
+}
+
+/**
  * diggingSlice: Persists graph state per tab.
  */
 function createDiggingSlice(set) {
@@ -95,6 +135,9 @@ export const useAppStore = create(
     (set, get) => ({
       ...createDiggingSlice(set),
       ...createNavigationSlice(set, get),
+      ...createSavedTracksSlice(set),
+      ...createStrudelTriggerSlice(set),
+      ...createSyncPlaybackSlice(set),
     }),
     {
       name: 'music-os-history',
@@ -102,6 +145,7 @@ export const useAppStore = create(
         tabs: s.tabs,
         activeTabId: s.activeTabId,
         diggingByTab: s.diggingByTab,
+        savedTracks: s.savedTracks,
       }),
     }
   )

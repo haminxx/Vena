@@ -17,6 +17,9 @@ const POPUP_WIDTH = 'w-[200px]'
  * 3D node: perfect circle with album art texture, always faces camera (Billboard).
  * Uses CircleGeometry for circular shape. 50% smaller default size.
  */
+const PULSE_SCALE = 1.5
+const PULSE_DECAY = 0.25
+
 export default function DiggingNode({
   track,
   isHovered,
@@ -25,20 +28,34 @@ export default function DiggingNode({
   onPointerOver,
   onPointerOut,
   onExtractColor,
+  isActiveNode,
+  lastTriggerTime,
 }) {
   const groupRef = useRef()
   const [texture, setTexture] = useState(null)
   const textureRef = useRef(null)
-  const targetScale = isHovered ? HOVER_SCALE : 1
+  const pulseRef = useRef(0)
+  const baseScale = isHovered ? HOVER_SCALE : 1
+  const targetScale = Math.max(baseScale, pulseRef.current)
 
   const imageUrl = track.albumImageMedium ?? track.albumImage ?? track.albumImageLowRes ?? track.artistImage ?? track.image ?? FALLBACK_IMAGE
   const songTitle = track.title ?? 'Song'
   const artistName = typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? 'Artist')
 
-  useFrame(() => {
+  useEffect(() => {
+    if (isActiveNode && lastTriggerTime) {
+      pulseRef.current = PULSE_SCALE
+    }
+  }, [isActiveNode, lastTriggerTime])
+
+  useFrame((_, delta) => {
     if (groupRef.current) {
+      if (pulseRef.current > baseScale) {
+        pulseRef.current = Math.max(baseScale, pulseRef.current - PULSE_DECAY * delta * 10)
+      }
+      const scale = Math.max(baseScale, pulseRef.current)
       groupRef.current.scale.lerp(
-        new THREE.Vector3(targetScale, targetScale, targetScale),
+        new THREE.Vector3(scale, scale, scale),
         0.15
       )
     }
