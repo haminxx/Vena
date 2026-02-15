@@ -134,7 +134,7 @@ function Scene({
                       onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
-                      onSave={() => saveTrackToTab(tabId, track)}
+                      onSave={() => addSavedTrack(track)}
                       onClose={onClose}
                       hasPreview={!!track?.previewUrl}
                       isSaved={savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))}
@@ -217,11 +217,13 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
   }, [focusNodeId, nodes])
 
   useEffect(() => {
-    if (tabId && nodes.length > 0) {
-      const tab = useAppStore.getState().tabs.find((t) => t.id === tabId)
-      const prev = tab?.data ?? {}
-      setDiggingState(tabId, { ...prev, nodes, links })
-    }
+    if (!tabId || nodes.length === 0) return
+    const tab = useAppStore.getState().tabs.find((t) => t.id === tabId)
+    const d = tab?.data ?? {}
+    const storedNodes = d.graphNodes ?? []
+    const storedLinks = d.graphLinks ?? []
+    if (storedNodes === nodes && storedLinks === links) return
+    setDiggingState(tabId, { ...d, nodes, links })
   }, [tabId, nodes, links, setDiggingState])
 
   const fetchSimilar = useCallback(async (track) => {
