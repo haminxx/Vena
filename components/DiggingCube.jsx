@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
+import { useAudioPreview } from '@/hooks/useAudioPreview'
 import { Html, CameraControls, Billboard, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import { mapTrackToPosition } from '@/utils/mapTrackToPosition'
@@ -10,6 +11,7 @@ import { useMoodBackground } from '@/context/MoodBackgroundContext'
 import DiggingNode, { NODE_RADIUS } from './DiggingNode'
 import ArtistCard from './ArtistCard'
 import NodeActionMenu from './NodeActionMenu'
+import AxisGuides from './AxisGuides'
 
 const CUBE_SIZE = 6
 const CLUSTER_OFFSET = 0.8
@@ -61,6 +63,7 @@ function Scene({
   selectedNodeId,
   showCardTrackId,
   onSelectNode,
+  onPlay,
   onExpand,
   onAbout,
   onClose,
@@ -73,6 +76,8 @@ function Scene({
       <ambientLight intensity={0.3} />
       <pointLight position={[8, 8, 8]} intensity={1} />
       <pointLight position={[-8, -8, 8]} intensity={0.5} />
+
+      <AxisGuides />
 
       {links.map((link, i) => {
         const from = Array.isArray(link.from) ? link.from : [0, 0, 0]
@@ -111,9 +116,11 @@ function Scene({
                 >
                   <div className="pointer-events-auto">
                     <NodeActionMenu
+                      onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
                       onClose={onClose}
+                      hasPreview={!!track?.previewUrl}
                     />
                   </div>
                 </Html>
@@ -142,6 +149,7 @@ function Scene({
 
 export default function DiggingCube({ dark = false, initialTrack, onBack }) {
   const { setHoverTrack } = useMoodBackground()
+  const { play } = useAudioPreview()
 
   const [nodes, setNodes] = useState(() => {
     if (!initialTrack) return []
@@ -222,6 +230,10 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
     setShowCardTrackId(null)
   }, [])
 
+  const handlePlay = useCallback((track) => {
+    if (track?.previewUrl) play(track.previewUrl)
+  }, [play])
+
   const handleExpand = useCallback(
     (track) => {
       setSelectedNodeId(null)
@@ -286,6 +298,7 @@ export default function DiggingCube({ dark = false, initialTrack, onBack }) {
           selectedNodeId={selectedNodeId}
           showCardTrackId={showCardTrackId}
           onSelectNode={handleSelectNode}
+          onPlay={handlePlay}
           onExpand={handleExpand}
           onAbout={handleAbout}
           onClose={handleClose}

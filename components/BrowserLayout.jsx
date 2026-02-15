@@ -36,7 +36,7 @@ export default function BrowserLayout() {
   const suggestionsRef = useRef(null)
   const inputRef = useRef(null)
 
-  const debouncedSearch = useDebounce(searchInput, 200)
+  const debouncedSearch = useDebounce(searchInput, 50)
   const { results: suggestions } = useSpotifySearch(debouncedSearch, searchInput)
 
   const activeTab = tabs.find((t) => t.id === activeTabId)

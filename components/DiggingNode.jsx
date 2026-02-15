@@ -14,7 +14,7 @@ const FALLBACK_IMAGE = 'data:image/svg+xml,' + encodeURIComponent(
 )
 
 /**
- * 3D node: circular "token" with artist image, always faces camera (Billboard).
+ * 3D node: circular "token" with song album cover, always faces camera (Billboard).
  * Thin white Torus ring for "poker chip" / badge feel.
  */
 export default function DiggingNode({
@@ -83,7 +83,7 @@ export default function DiggingNode({
     <group ref={groupRef}>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <group {...eventHandlers}>
-          {/* Circular token with artist image */}
+          {/* Circular token with album cover */}
           <mesh>
             <circleGeometry args={[NODE_RADIUS, 32]} />
             {texture ? (

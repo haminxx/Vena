@@ -25,7 +25,7 @@ export default function OmniSearch({
   const suggestionsRef = useRef(null)
   const inputRef = useRef(null)
 
-  const debouncedInput = useDebounce(inputValue, 200)
+  const debouncedInput = useDebounce(inputValue, 50)
   const { results: suggestions } = useSpotifySearch(debouncedInput, inputValue)
 
   // Sync external value
@@ -60,7 +60,6 @@ export default function OmniSearch({
   const handleSubmit = useCallback(
     (e) => {
       e.preventDefault()
-      setSuggestions([])
       onSubmit?.(inputValue)
     },
     [inputValue, onSubmit]
@@ -91,7 +90,6 @@ export default function OmniSearch({
         inputRef.current &&
         !inputRef.current.contains(e.target)
       ) {
-        setSuggestions([])
         setHighlightedIndex(-1)
       }
     }
