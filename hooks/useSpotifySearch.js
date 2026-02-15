@@ -4,17 +4,16 @@ import { useState, useEffect, useRef } from 'react'
 
 /**
  * Spotify search hook with AbortController for instant cancellation.
- * When user types (abortTrigger changes), aborts the previous request immediately
- * to prevent stale data and reduce lag.
- *
- * Light payload: search endpoint returns only id, name, artist_name, image.
+ * - New AbortController before EVERY fetch.
+ * - On each keystroke (abortTrigger change), abort previous request immediately.
+ * - Light payload: search returns only id, name, artist_name, image (no audio features).
  */
 export function useSpotifySearch(debouncedQuery, abortTrigger) {
   const [results, setResults] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef(null)
 
-  // Abort previous request immediately when user types (before debounce settles)
+  // Critical: abort previous request on every keystroke (before debounce settles)
   useEffect(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()

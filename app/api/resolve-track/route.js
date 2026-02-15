@@ -188,19 +188,22 @@ export async function POST(request) {
     }
 
     const firstYt = Array.isArray(ytResults) ? ytResults[0] : null
+    const fallbackThumb = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? null
     const albumImgs = spotifyTrack.album?.images ?? []
     const albumImage = albumImgs[0]?.url ?? null
     const albumImageMedium = albumImgs[1]?.url ?? albumImgs[0]?.url ?? null
     const albumImageLowRes = albumImgs[2]?.url ?? albumImgs[1]?.url ?? albumImage ?? null
-    const fallbackThumb = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? albumImage ?? null
+    // Use artist.images for node/card. album* kept for backward compat only.
+    const artistImageLargeFinal = artistImageLarge ?? fallbackThumb
+    const artistImageSmallFinal = artistImageSmall ?? artistImageLarge ?? fallbackThumb
 
     const youtube_metadata = {
       title,
       artist,
       videoId,
-      thumbnail: artistImageSmall ?? artistImageLarge ?? fallbackThumb,
-      artistImageLarge: artistImageLarge ?? fallbackThumb,
-      artistImageSmall: artistImageSmall ?? artistImageLarge ?? fallbackThumb,
+      thumbnail: artistImageSmallFinal ?? artistImageLargeFinal ?? fallbackThumb,
+      artistImageLarge: artistImageLargeFinal,
+      artistImageSmall: artistImageSmallFinal,
       albumImage,
       albumImageMedium,
       albumImageLowRes,

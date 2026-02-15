@@ -44,14 +44,18 @@ function toArtistString(v) {
 }
 function metadataToTrack(meta) {
   if (!meta || typeof meta !== 'object') return null
+  // Spotify artist.images: [0]=large (card), [2]=small (node). Do NOT use album.images.
+  const artistImageLarge = meta.artistImageLarge ?? meta.thumbnail ?? null
+  const artistImageSmall = meta.artistImageSmall ?? meta.artistImageLarge ?? meta.thumbnail ?? null
   return {
     id: meta.spotifyId || meta.videoId || `track-${Date.now()}`,
     videoId: meta.videoId ?? null,
     title: meta.title ?? '',
     artist: toArtistString(meta.artist),
     artistId: meta.artistId ?? null,
-    artistImage: meta.artistImageSmall ?? meta.artistImageLarge ?? meta.thumbnail ?? null,
-    artistImageLarge: meta.artistImageLarge ?? meta.thumbnail ?? null,
+    artistImage: artistImageSmall,
+    artistImageLarge,
+    artistImageSmall,
     albumImage: meta.albumImage ?? null,
     albumImageMedium: meta.albumImageMedium ?? meta.albumImage ?? null,
     albumImageLowRes: meta.albumImageLowRes ?? meta.albumImage ?? null,

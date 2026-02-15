@@ -132,14 +132,12 @@ function Scene({
                   pointerEvents="none"
                   style={{ width: 200 }}
                 >
-                  <div className="pointer-events-auto w-[200px]">
+                  <div className="pointer-events-auto">
                     <NodeActionMenu
-                      onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
                       onSave={() => addSavedTrack(track)}
                       onClose={onClose}
-                      hasPreview={!!track?.previewUrl}
                       isSaved={savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))}
                     />
                   </div>

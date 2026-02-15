@@ -72,7 +72,8 @@ export async function GET(request) {
       const artist = t.artists?.[0]
       const artistName = artist?.name ?? ''
       const artistData = artist?.id ? artistMap[artist.id] : null
-      const image = artistData?.images?.[0]?.url ?? null
+      const imgs = artistData?.images ?? []
+      const image = imgs[2]?.url ?? imgs[1]?.url ?? imgs[0]?.url ?? null
       results.push({
         type: 'track',
         spotifyId: t.id,
@@ -92,7 +93,7 @@ export async function GET(request) {
         title: a.name,
         artist: null,
         artistId: a.id,
-        thumbnail: a.images?.[0]?.url ?? null,
+        thumbnail: a.images?.[2]?.url ?? a.images?.[1]?.url ?? a.images?.[0]?.url ?? null,
         query: a.name,
       })
     }

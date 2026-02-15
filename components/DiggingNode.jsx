@@ -39,7 +39,8 @@ export default function DiggingNode({
   const baseScale = isHovered ? HOVER_SCALE : 1
   const targetScale = Math.max(baseScale, pulseRef.current)
 
-  const imageUrl = track.albumImageMedium ?? track.albumImage ?? track.albumImageLowRes ?? track.artistImage ?? track.image ?? FALLBACK_IMAGE
+  // Prioritize Spotify artist.images: [2]=small for node, [0]=large for card
+  const imageUrl = track.artistImageSmall ?? track.artistImage ?? track.artistImageLarge ?? track.albumImageMedium ?? track.albumImage ?? track.albumImageLowRes ?? track.image ?? FALLBACK_IMAGE
   const songTitle = track.title ?? 'Song'
   const artistName = typeof track.artist === 'string' ? track.artist : (track.artist?.name ?? 'Artist')
 
