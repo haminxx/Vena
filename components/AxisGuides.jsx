@@ -37,7 +37,7 @@ export default function AxisGuides() {
 
   return (
     <group>
-      {/* X Axis: Red */}
+      {/* X Axis: Red - labels at far ends only (no center labels) */}
       <AxisLine start={[-L, 0, 0]} end={[L, 0, 0]} color="#e53935" />
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <Html position={[L + LABEL_OFFSET, 0, 0]} center style={labelStyle}>
@@ -50,7 +50,7 @@ export default function AxisGuides() {
         </Html>
       </Billboard>
 
-      {/* Y Axis: Green - Slower (-) to Faster (+) */}
+      {/* Y Axis: Green */}
       <AxisLine start={[0, -L, 0]} end={[0, L, 0]} color="#43a047" />
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <Html position={[0, -L - LABEL_OFFSET, 0]} center style={labelStyle}>

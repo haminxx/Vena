@@ -126,18 +126,19 @@ function Scene({
             {isMenuOpen && !isCardOpen && (
               <Billboard follow lockX={false} lockY={false} lockZ={false}>
                 <Html
-                  transform
-                  position={[0, NODE_RADIUS + 0.2, 0]}
+                  position={[0, NODE_RADIUS + 0.3, 0]}
                   center
                   pointerEvents="none"
-                  style={{ width: 200 }}
+                  style={{ width: 300, pointerEvents: 'auto' }}
                 >
-                  <div className="pointer-events-auto">
+                  <div className="pointer-events-auto w-[300px]">
                     <NodeActionMenu
+                      onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
                       onSave={() => addSavedTrack(track)}
                       onClose={onClose}
+                      hasPreview={!!track?.previewUrl}
                       isSaved={savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))}
                     />
                   </div>
@@ -168,7 +169,7 @@ function Scene({
 export default function DiggingCube({ dark = false, tabId, initialTrack, persistedNodes, persistedLinks, focusNodeId, onBack, onExpandNode }) {
   const lastTriggerTime = useAppStore((s) => s.lastTriggerTime)
   const activeTabId = useAppStore((s) => s.activeTabId)
-  const diggingState = useAppStore((s) => s.diggingByTab[activeTabId])
+  const diggingState = useAppStore((s) => s.tabs.find((t) => t.id === tabId)?.graphState ?? null)
   const { setHoverTrack, setAlbumColorFromImage } = useMoodBackground()
   const savedTracks = useSavedTracks()
   const addSavedTrack = useAddSavedTrack()
@@ -196,7 +197,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       const pos = initialTrack.audioFeatures
         ? mapTrackToPosition(initialTrack.audioFeatures)
         : { x: 0, y: 0, z: 0 }
-      const offset = 12
+      const offset = 4
       controlsRef.current.setLookAt(pos.x + offset, pos.y + offset, pos.z + offset, pos.x, pos.y, pos.z, true)
     }
   }, [initialTrack?.id])
@@ -331,7 +332,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
         </div>
       )}
       <Canvas
-        camera={{ position: [20, 20, 20], fov: 50 }}
+        camera={{ position: [6, 6, 6], fov: 50 }}
         gl={{ antialias: true, alpha: false }}
         style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => gl.setClearColor(dark ? '#0a0a0a' : '#0f0f0f')}

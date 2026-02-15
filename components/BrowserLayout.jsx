@@ -120,19 +120,22 @@ export default function BrowserLayout() {
   ]
   const showBreadcrumb = activeTab?.type === 'digging' && pathItems.length > 0
 
+  const getTabGraphState = useCallback(() => {
+    const t = useAppStore.getState().tabs.find((x) => x.id === activeTabId)
+    return t?.graphState ?? null
+  }, [activeTabId])
+
   const handleBack = useCallback(() => {
     if (!canGoBack) return
     const targetIndex = currentIndex - 1
     const histItem = history?.[targetIndex]
     const focusId = histItem?.graphData?.id ?? histItem?.graphData?.spotifyId
     if (focusId) {
-      const current = useAppStore.getState().diggingByTab[activeTabId]
-      if (current) {
-        setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
-      }
+      const current = getTabGraphState()
+      if (current) setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
     }
     back()
-  }, [canGoBack, currentIndex, history, activeTabId, setDiggingState, back])
+  }, [canGoBack, currentIndex, history, activeTabId, setDiggingState, back, getTabGraphState])
 
   const handleForward = useCallback(() => {
     if (!canGoForward) return
@@ -140,13 +143,11 @@ export default function BrowserLayout() {
     const histItem = history?.[targetIndex]
     const focusId = histItem?.graphData?.id ?? histItem?.graphData?.spotifyId
     if (focusId) {
-      const current = useAppStore.getState().diggingByTab[activeTabId]
-      if (current) {
-        setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
-      }
+      const current = getTabGraphState()
+      if (current) setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
     }
     forward()
-  }, [canGoForward, currentIndex, history, activeTabId, setDiggingState, forward])
+  }, [canGoForward, currentIndex, history, activeTabId, setDiggingState, forward, getTabGraphState])
 
   const handleBreadcrumbClick = useCallback(
     (item) => {
@@ -157,14 +158,12 @@ export default function BrowserLayout() {
         const histItem = history?.[item.index]
         const focusId = histItem?.graphData?.id ?? histItem?.graphData?.spotifyId
         if (focusId) {
-          const current = useAppStore.getState().diggingByTab[activeTabId]
-          if (current) {
-            setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
-          }
+          const current = getTabGraphState()
+          if (current) setDiggingState(activeTabId, { ...current, focusNodeId: focusId })
         }
       }
     },
-    [handleHome, goToIndex, history, activeTabId, setDiggingState]
+    [handleHome, goToIndex, history, activeTabId, setDiggingState, getTabGraphState]
   )
 
   const handleSelectSuggestion = useCallback(

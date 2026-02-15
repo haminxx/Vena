@@ -73,8 +73,11 @@ export default function DiggingView({
   initialGraphData = null,
 }) {
   const { activeTabId } = useBrowserState()
-  const diggingByTab = useAppStore((s) => s.diggingByTab)
-  const persisted = diggingByTab[activeTabId]
+  const graphState = useAppStore((s) => {
+    const t = s.tabs.find((x) => x.id === activeTabId)
+    return t?.graphState ?? { nodes: [], links: [], focusNodeId: null }
+  })
+  const persisted = graphState
   const hasPersistedGraph = (persisted?.nodes?.length ?? 0) > 0
 
   const [searchInput, setSearchInput] = useState(initialQuery)

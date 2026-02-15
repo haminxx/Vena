@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { Billboard, Html } from '@react-three/drei'
 import * as THREE from 'three'
 
-const NODE_RADIUS = 0.125
+const NODE_RADIUS = 0.5
 const HOVER_SCALE = 1.2
 const FALLBACK_IMAGE = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="%23a78bfa" width="64" height="64"/><text x="32" y="38" font-size="24" fill="white" text-anchor="middle" font-family="sans-serif">?</text></svg>'

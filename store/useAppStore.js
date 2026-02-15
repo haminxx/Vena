@@ -6,6 +6,13 @@ import { persist } from 'zustand/middleware'
 const TAB_ID_PREFIX = 'tab-'
 const INITIAL_TAB_ID = 'tab-initial'
 
+const DEFAULT_GRAPH_STATE = {
+  nodes: [],
+  links: [],
+  cameraPosition: [0, 0, 10],
+  focusNodeId: null,
+}
+
 function createTabId() {
   return TAB_ID_PREFIX + Date.now() + '-' + Math.random().toString(36).slice(2)
 }
@@ -14,8 +21,10 @@ function createNewTab(type = 'new-tab', id = null) {
   return {
     id: id ?? createTabId(),
     type,
+    title: null,
     history: type === 'new-tab' ? [] : [{ query: '', graphData: null }],
     currentIndex: 0,
+    graphState: { ...DEFAULT_GRAPH_STATE },
   }
 }
 
@@ -60,7 +69,11 @@ function createNavigationSlice(set, get) {
           if (t.id !== tabId) return t
           const isNewTab = t.type === 'new-tab'
           const history = isNewTab ? [initialState ?? { query: '', graphData: null }] : t.history
-          return { ...t, type, history, currentIndex: 0 }
+          const title = initialState?.graphData?.title ?? initialState?.query ?? null
+          const graphState = isNewTab && type === 'digging'
+            ? { ...DEFAULT_GRAPH_STATE }
+            : (t.graphState ?? { ...DEFAULT_GRAPH_STATE })
+          return { ...t, type, title, history, currentIndex: 0, graphState }
         }),
       })),
   }
@@ -107,26 +120,23 @@ function createSyncPlaybackSlice(set) {
 }
 
 /**
- * diggingSlice: Persists graph state per tab.
+ * diggingSlice: Graph state lives inside each tab (per-tab graphState).
  */
 function createDiggingSlice(set) {
   return {
-    diggingByTab: {},
-
     setDiggingState: (tabId, state) =>
       set((s) => ({
-        diggingByTab: {
-          ...s.diggingByTab,
-          [tabId]: state,
-        },
+        tabs: s.tabs.map((t) =>
+          t.id !== tabId ? t : { ...t, graphState: { ...(t.graphState ?? DEFAULT_GRAPH_STATE), ...state } }
+        ),
       })),
 
     clearDiggingState: (tabId) =>
-      set((s) => {
-        const next = { ...s.diggingByTab }
-        delete next[tabId]
-        return { diggingByTab: next }
-      }),
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.id !== tabId ? t : { ...t, graphState: { ...DEFAULT_GRAPH_STATE } }
+        ),
+      })),
   }
 }
 
@@ -141,12 +151,25 @@ export const useAppStore = create(
     }),
     {
       name: 'music-os-history',
+      version: 2,
       partialize: (s) => ({
         tabs: s.tabs,
         activeTabId: s.activeTabId,
-        diggingByTab: s.diggingByTab,
         savedTracks: s.savedTracks,
       }),
+      merge: (persisted, current) => {
+        const p = persisted ?? {}
+        const tabs = (p.tabs ?? current.tabs ?? []).map((t) => {
+          const gs = t.graphState ?? p.diggingByTab?.[t.id] ?? DEFAULT_GRAPH_STATE
+          return { ...t, graphState: { ...DEFAULT_GRAPH_STATE, ...gs } }
+        })
+        return {
+          ...current,
+          tabs: tabs.length ? tabs : current.tabs,
+          activeTabId: p.activeTabId ?? current.activeTabId,
+          savedTracks: p.savedTracks ?? current.savedTracks,
+        }
+      },
     }
   )
 )
