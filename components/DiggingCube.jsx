@@ -189,6 +189,24 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     return [{ ...initialTrack, position: pos, parentId: null }]
   })
   const [links, setLinks] = useState(() => persistedLinks ?? [])
+
+  useEffect(() => {
+    if (persistedNodes?.length > 0) {
+      setNodes(persistedNodes)
+      setLinks(persistedLinks ?? [])
+    } else if (initialTrack) {
+      const pos = initialTrack.audioFeatures
+        ? positionFromFeatures(initialTrack.audioFeatures, [0, 0, 0], 0)
+        : [0, 0, 0]
+      setNodes([{ ...initialTrack, position: pos, parentId: null }])
+      setLinks([])
+    } else {
+      setNodes([])
+      setLinks([])
+    }
+    setSelectedNodeId(null)
+    setShowCardTrackId(null)
+  }, [tabId])
   const [selectedNodeId, setSelectedNodeId] = useState(null)
   const [showCardTrackId, setShowCardTrackId] = useState(null)
   const [hoveredTrack, setHoveredTrack] = useState(null)

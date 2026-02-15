@@ -8,9 +8,9 @@ import { useAppStore } from '@/store/useAppStore'
 const EMPTY_ARRAY = []
 
 function getSpotifyUrl(track) {
-  const id = track?.spotifyId ?? track?.id
-  if (!id) return null
-  return `https://open.spotify.com/track/${id}`
+  const spotifyId = track?.spotifyId
+  if (!spotifyId || typeof spotifyId !== 'string') return null
+  return `https://open.spotify.com/track/${spotifyId}`
 }
 
 function getYouTubeUrl(track) {

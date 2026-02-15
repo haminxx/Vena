@@ -74,6 +74,22 @@ export default function DiggingNode({
       imageUrl,
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace
+        const img = tex.image
+        if (img?.width && img?.height) {
+          const w = img.width
+          const h = img.height
+          const aspect = w / h
+          if (Math.abs(aspect - 1) > 0.01) {
+            tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping
+            if (aspect > 1) {
+              tex.repeat.set(1 / aspect, 1)
+              tex.offset.set((1 - 1 / aspect) / 2, 0)
+            } else {
+              tex.repeat.set(1, aspect)
+              tex.offset.set(0, (1 - aspect) / 2)
+            }
+          }
+        }
         textureRef.current = tex
         setTexture(tex)
       },
