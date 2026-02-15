@@ -2,63 +2,79 @@
 
 import { Line, Html, Billboard } from '@react-three/drei'
 
-const AXIS_LENGTH = 10
-const LABEL_OFFSET = 0.5
+const AXIS_LENGTH = 1000
+const LABEL_OFFSET = 2
 
 const labelStyle = {
-  fontSize: '11px',
+  fontSize: '10px',
   fontWeight: 500,
-  color: 'rgba(150,150,150,0.9)',
+  color: 'rgba(180,180,180,0.85)',
   whiteSpace: 'nowrap',
   pointerEvents: 'none',
-  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+  textShadow: '0 1px 2px rgba(0,0,0,0.6)',
 }
 
 /**
- * Dashed axis line using drei Line with dashed prop
+ * SolidWorks-style axis line: X=Red, Y=Green, Z=Blue, subtle and thin.
  */
-function DashedAxisLine({ start, end, color = '#666' }) {
+function AxisLine({ start, end, color }) {
   return (
     <Line
       points={[start, end]}
       color={color}
-      dashed
-      dashScale={1}
-      dashSize={0.3}
-      gapSize={0.2}
+      lineWidth={0.8}
       transparent
-      opacity={0.5}
+      opacity={0.3}
     />
   )
 }
 
 /**
- * 3D axis guides with dashed lines and billboarded labels.
- * X: Organic (left) / Orchestral (right)
- * Y: Slower (bottom) / Faster (top)
- * Z: Epic (back) / Ethereal (front)
+ * CAD-style infinite axes: long lines (1000 units), RGB colors, labels at axis ends.
  */
 export default function AxisGuides() {
+  const L = AXIS_LENGTH
+
   return (
     <group>
-      {/* X Axis: no labels - center clean */}
-      <DashedAxisLine start={[-AXIS_LENGTH, 0, 0]} end={[AXIS_LENGTH, 0, 0]} color="#888" />
-
-      {/* Y Axis: Slower (-) to Faster (+) */}
-      <DashedAxisLine start={[0, -AXIS_LENGTH, 0]} end={[0, AXIS_LENGTH, 0]} color="#888" />
+      {/* X Axis: Red */}
+      <AxisLine start={[-L, 0, 0]} end={[L, 0, 0]} color="#e53935" />
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Html position={[0, -AXIS_LENGTH - LABEL_OFFSET, 0]} center style={labelStyle}>
+        <Html position={[L + LABEL_OFFSET, 0, 0]} center style={labelStyle}>
+          <span>Orchestral</span>
+        </Html>
+      </Billboard>
+      <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        <Html position={[-L - LABEL_OFFSET, 0, 0]} center style={labelStyle}>
+          <span>Organic</span>
+        </Html>
+      </Billboard>
+
+      {/* Y Axis: Green - Slower (-) to Faster (+) */}
+      <AxisLine start={[0, -L, 0]} end={[0, L, 0]} color="#43a047" />
+      <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        <Html position={[0, -L - LABEL_OFFSET, 0]} center style={labelStyle}>
           <span>Slower</span>
         </Html>
       </Billboard>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <Html position={[0, AXIS_LENGTH + LABEL_OFFSET, 0]} center style={labelStyle}>
+        <Html position={[0, L + LABEL_OFFSET, 0]} center style={labelStyle}>
           <span>Faster</span>
         </Html>
       </Billboard>
 
-      {/* Z Axis: no labels - center clean */}
-      <DashedAxisLine start={[0, 0, -AXIS_LENGTH]} end={[0, 0, AXIS_LENGTH]} color="#888" />
+      {/* Z Axis: Blue */}
+      <AxisLine start={[0, 0, -L]} end={[0, 0, L]} color="#1e88e5" />
+      <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        <Html position={[0, 0, L + LABEL_OFFSET]} center style={labelStyle}>
+          <span>Ethereal</span>
+        </Html>
+      </Billboard>
+      <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        <Html position={[0, 0, -L - LABEL_OFFSET]} center style={labelStyle}>
+          <span>Epic</span>
+        </Html>
+      </Billboard>
     </group>
   )
 }

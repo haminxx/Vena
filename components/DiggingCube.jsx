@@ -87,8 +87,8 @@ function Scene({
 }) {
   return (
     <>
-      <ambientLight intensity={0.3} />
-      <pointLight position={[8, 8, 8]} intensity={1} />
+      <ambientLight intensity={0.5} />
+      <pointLight position={[10, 10, 10]} intensity={1.2} />
       <pointLight position={[-8, -8, 8]} intensity={0.5} />
 
       <AxisGuides />

@@ -124,20 +124,23 @@ export default function DiggingNode({
   return (
     <group ref={groupRef}>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <mesh {...eventHandlers}>
+        <mesh {...eventHandlers} renderOrder={1} frustumCulled={false}>
           <circleGeometry args={[NODE_RADIUS, 32]} />
           {texture ? (
             <meshBasicMaterial
               map={texture}
+              color="#ffffff"
               transparent
+              opacity={1}
               side={THREE.DoubleSide}
+              depthWrite={true}
             />
           ) : (
             <meshBasicMaterial
-              color="#a78bfa"
-              transparent
-              opacity={0.9}
+              color="#1DB954"
+              transparent={false}
               side={THREE.DoubleSide}
+              depthWrite={true}
             />
           )}
         </mesh>
