@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { Play, X } from 'lucide-react'
-import { useAudioPreview } from '@/hooks/useAudioPreview'
+import { useAudioPlayer } from '@/context/AudioPlayerContext'
 import { useMoodBackground } from '@/context/MoodBackgroundContext'
 
 /**
  * Artist Post Card - glassmorphism style, appears when a node is clicked.
- * Uses useAudioPreview singleton for reliable playback.
+ * Uses AudioPlayerContext singleton for reliable playback.
  * Scroll fix: overscroll-contain, onPointerDown stopPropagation.
  */
 export default function ArtistCard({ track, onClose }) {
-  const { play, stop, playingUrl } = useAudioPreview()
+  const { play, stop, playingUrl } = useAudioPlayer()
   const { setPlayingTrack } = useMoodBackground()
   const [genres, setGenres] = useState([])
   const [topTracks, setTopTracks] = useState([])

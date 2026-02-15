@@ -2,8 +2,8 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { useAudioPreview } from '@/hooks/useAudioPreview'
-import { Html, CameraControls, Billboard, Line } from '@react-three/drei'
+import { useAudioPlayer } from '@/context/AudioPlayerContext'
+import { Html, CameraControls, Billboard, Line, Bounds } from '@react-three/drei'
 import * as THREE from 'three'
 import { mapTrackToPosition } from '@/utils/mapTrackToPosition'
 import { ArrowLeft } from 'lucide-react'
@@ -66,6 +66,7 @@ function Scene({
   hoveredTrack,
   onHover,
   onUnhover,
+  onExtractColor,
 }) {
   return (
     <>
@@ -75,7 +76,8 @@ function Scene({
 
       <AxisGuides />
 
-      {links.map((link, i) => {
+      <Bounds fit clip observe margin={1.2}>
+        {links.map((link, i) => {
         const from = Array.isArray(link.from) ? link.from : [0, 0, 0]
         const to = Array.isArray(link.to) ? link.to : [0, 0, 0]
         return (
@@ -101,16 +103,18 @@ function Scene({
               onClick={() => onSelectNode(track)}
               onPointerOver={onHover}
               onPointerOut={onUnhover}
+              onExtractColor={onExtractColor}
             />
             {isMenuOpen && !isCardOpen && (
               <Billboard follow lockX={false} lockY={false} lockZ={false}>
                 <Html
                   transform
-                  position={[0, NODE_RADIUS + 0.35, 0]}
+                  position={[0, NODE_RADIUS + 0.2, 0]}
                   center
                   pointerEvents="none"
+                  style={{ width: 200 }}
                 >
-                  <div className="pointer-events-auto">
+                  <div className="pointer-events-auto w-[200px]">
                     <NodeActionMenu
                       onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
@@ -126,7 +130,7 @@ function Scene({
               <Billboard follow lockX={false} lockY={false} lockZ={false}>
                 <Html
                   transform
-                  position={[0, NODE_RADIUS + 0.3, 0]}
+                  position={[0, NODE_RADIUS + 0.2, 0]}
                   center
                   pointerEvents="none"
                 >
@@ -139,13 +143,14 @@ function Scene({
           </group>
         )
       })}
+      </Bounds>
     </>
   )
 }
 
 export default function DiggingCube({ dark = false, tabId, initialTrack, persistedNodes, persistedLinks, focusNodeId, onBack, onExpandNode }) {
-  const { setHoverTrack } = useMoodBackground()
-  const { play } = useAudioPreview()
+  const { setHoverTrack, setAlbumColorFromImage } = useMoodBackground()
+  const { play } = useAudioPlayer()
   const setDiggingState = useAppStore((s) => s.setDiggingState)
 
   const [nodes, setNodes] = useState(() => {
@@ -276,7 +281,10 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   useEffect(() => {
     setHoverTrack(hoveredTrack ?? null)
-  }, [hoveredTrack, setHoverTrack])
+    if (!hoveredTrack && !selectedNodeId && !showCardTrackId) {
+      setAlbumColorFromImage(null)
+    }
+  }, [hoveredTrack, selectedNodeId, showCardTrackId, setHoverTrack, setAlbumColorFromImage])
 
   if (!initialTrack && !persistedNodes?.length && nodes.length === 0) {
     return null
@@ -327,6 +335,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           hoveredTrack={hoveredTrack}
           onHover={setHoveredTrack}
           onUnhover={() => setHoveredTrack(null)}
+          onExtractColor={setAlbumColorFromImage}
         />
       </Canvas>
 

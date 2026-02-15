@@ -1,28 +1,19 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-
-const TAB_ID_PREFIX = 'tab-'
-const INITIAL_TAB_ID = 'tab-initial'
-
-function createTabId() {
-  return TAB_ID_PREFIX + Date.now() + '-' + Math.random().toString(36).slice(2)
-}
-
-function createNewTab(type = 'new-tab', id = null) {
-  return {
-    id: id ?? createTabId(),
-    type,
-    history: type === 'new-tab' ? [] : [{ query: '', graphData: null }],
-    currentIndex: 0,
-  }
-}
+import { useAppStore } from '@/store/useAppStore'
 
 const BrowserStateContext = createContext(null)
 
 export function BrowserStateProvider({ children }) {
-  const [tabs, setTabs] = useState(() => [createNewTab('new-tab', INITIAL_TAB_ID)])
-  const [activeTabId, setActiveTabId] = useState(INITIAL_TAB_ID)
+  const tabs = useAppStore((s) => s.tabs)
+  const activeTabId = useAppStore((s) => s.activeTabId)
+  const setActiveTabId = useAppStore((s) => s.setActiveTabId)
+  const addTab = useAppStore((s) => s.addTab)
+  const removeTab = useAppStore((s) => s.removeTab)
+  const updateTab = useAppStore((s) => s.updateTab)
+  const setTabType = useAppStore((s) => s.setTabType)
+
   const [theme, setThemeState] = useState('light')
 
   useEffect(() => {
@@ -34,51 +25,6 @@ export function BrowserStateProvider({ children }) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('digbrowser-theme', value)
     }
-  }, [])
-
-  const addTab = useCallback(() => {
-    const tab = createNewTab('new-tab')
-    setTabs((prev) => [...prev, tab])
-    setActiveTabId(tab.id)
-    return tab.id
-  }, [])
-
-  const removeTab = useCallback((tabId) => {
-    setTabs((prev) => {
-      const next = prev.filter((t) => t.id !== tabId)
-      if (next.length === 0) return [createNewTab('new-tab')]
-      return next
-    })
-    setActiveTabId((id) => {
-      const next = tabs.filter((t) => t.id !== tabId)
-      const idx = next.findIndex((t) => t.id === id)
-      if (idx >= 0) return id
-      return next[0]?.id ?? null
-    })
-  }, [tabs])
-
-  const updateTab = useCallback((tabId, updater) => {
-    setTabs((prev) =>
-      prev.map((t) => (t.id === tabId ? (typeof updater === 'function' ? updater(t) : { ...t, ...updater }) : t))
-    )
-  }, [])
-
-  const setTabType = useCallback((tabId, type, initialState = null) => {
-    setTabs((prev) =>
-      prev.map((t) => {
-        if (t.id !== tabId) return t
-        const isNewTab = t.type === 'new-tab'
-        const history = isNewTab
-          ? [initialState ?? { query: '', graphData: null }]
-          : t.history
-        return {
-          ...t,
-          type,
-          history,
-          currentIndex: 0,
-        }
-      })
-    )
   }, [])
 
   const value = useMemo(
@@ -93,7 +39,7 @@ export function BrowserStateProvider({ children }) {
       theme,
       setTheme,
     }),
-    [tabs, activeTabId, addTab, removeTab, updateTab, setTabType, theme, setTheme]
+    [tabs, activeTabId, setActiveTabId, addTab, removeTab, updateTab, setTabType, theme, setTheme]
   )
 
   return <BrowserStateContext.Provider value={value}>{children}</BrowserStateContext.Provider>

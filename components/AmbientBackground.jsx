@@ -6,15 +6,18 @@ import { useMoodBackground } from '@/context/MoodBackgroundContext'
 import { DEFAULT_PALETTE } from '@/utils/moodColors'
 
 const TRANSITION = { duration: 1.5, ease: 'easeInOut' }
+const ALBUM_COLOR_TRANSITION = { duration: 0.8, ease: 'easeInOut' }
 
 /**
  * Luxurious mesh gradient background - 2-3 large blurred radial circles that drift.
- * Priority: hover > playing > idle (default Onyx/Midnight).
+ * Priority: albumColor (from hover/click) > hover > playing > idle (default Onyx/Midnight).
  */
 export default function AmbientBackground() {
-  const { hoverPalette, playingPalette } = useMoodBackground()
+  const { hoverPalette, playingPalette, albumColor } = useMoodBackground()
 
-  const [color1, color2] = hoverPalette ?? playingPalette ?? DEFAULT_PALETTE
+  const [color1, color2] = albumColor
+    ? [albumColor, albumColor]
+    : (hoverPalette ?? playingPalette ?? DEFAULT_PALETTE)
 
   const circles = useMemo(
     () => [
@@ -50,7 +53,7 @@ export default function AmbientBackground() {
           transition={{
             x: { duration: 15 + i * 2, repeat: Infinity, ease: 'easeInOut' },
             y: { duration: 18 + i * 3, repeat: Infinity, ease: 'easeInOut' },
-            background: { duration: 1.5, ease: 'easeInOut' },
+            background: albumColor ? ALBUM_COLOR_TRANSITION : TRANSITION,
           }}
         />
       ))}
@@ -59,7 +62,7 @@ export default function AmbientBackground() {
         animate={{
           background: `linear-gradient(135deg, ${color1}22 0%, ${color2}11 50%, #0a0a0f 100%)`,
         }}
-        transition={TRANSITION}
+        transition={albumColor ? ALBUM_COLOR_TRANSITION : TRANSITION}
       />
     </div>
   )

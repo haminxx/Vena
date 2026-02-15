@@ -9,7 +9,7 @@ import { Play, Network, Info } from 'lucide-react'
 export default function NodeActionMenu({ onPlay, onExpand, onAbout, onClose, hasPreview = false, dark = false }) {
   return (
     <div
-      className="flex items-center gap-1 px-2 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 shadow-xl"
+      className="flex items-center gap-1 px-2 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 shadow-xl w-[200px] justify-center"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
