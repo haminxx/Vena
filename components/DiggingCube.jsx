@@ -14,8 +14,6 @@ import NodeActionMenu from './NodeActionMenu'
 import AxisGuides from './AxisGuides'
 import { useAppStore } from '@/store/useAppStore'
 
-const useSavedTracks = () => useAppStore((s) => s.savedTracks)
-const useAddSavedTrack = () => useAppStore((s) => s.addSavedTrack)
 
 const CLUSTER_OFFSET = 0.8
 
@@ -136,7 +134,7 @@ function Scene({
                       onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
-                      onSave={() => addSavedTrack(track)}
+                      onSave={() => saveTrackToTab(tabId, track)}
                       onClose={onClose}
                       hasPreview={!!track?.previewUrl}
                       isSaved={savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))}
@@ -166,13 +164,18 @@ function Scene({
   )
 }
 
-export default function DiggingCube({ dark = false, tabId, initialTrack, persistedNodes, persistedLinks, focusNodeId, onBack, onExpandNode }) {
+export default function DiggingCube({ dark = false, tabId, initialTrack, persistedNodes, persistedLinks, focusNodeId, onBack, onExpandNode, onSelectNode }) {
   const lastTriggerTime = useAppStore((s) => s.lastTriggerTime)
-  const activeTabId = useAppStore((s) => s.activeTabId)
-  const diggingState = useAppStore((s) => s.tabs.find((t) => t.id === tabId)?.graphState ?? null)
+  const diggingState = useAppStore((s) => {
+    const t = s.tabs.find((x) => x.id === tabId)
+    return t?.data ?? null
+  })
+  const savedTracks = useAppStore((s) => {
+    const t = s.tabs.find((x) => x.id === tabId)
+    return t?.data?.savedTracks ?? []
+  })
+  const saveTrackToTab = useAppStore((s) => s.saveTrackToTab)
   const { setHoverTrack, setAlbumColorFromImage } = useMoodBackground()
-  const savedTracks = useSavedTracks()
-  const addSavedTrack = useAddSavedTrack()
   const { play } = useAudioPlayer()
   const setDiggingState = useAppStore((s) => s.setDiggingState)
 
@@ -216,7 +219,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
   useEffect(() => {
     if (tabId && nodes.length > 0) {
       const tab = useAppStore.getState().tabs.find((t) => t.id === tabId)
-      const prev = tab?.graphState ?? {}
+      const prev = tab?.data ?? {}
       setDiggingState(tabId, { ...prev, nodes, links })
     }
   }, [tabId, nodes, links, setDiggingState])
@@ -276,9 +279,11 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   const handleSelectNode = useCallback((track) => {
     if (!track) return
+    const isSelecting = selectedNodeId !== track.id
     setSelectedNodeId((prev) => (prev === track.id ? null : track.id))
     setShowCardTrackId(null)
-  }, [])
+    if (isSelecting) onSelectNode?.(track)
+  }, [onSelectNode, selectedNodeId])
 
   const handlePlay = useCallback((track) => {
     if (track?.previewUrl) play(track.previewUrl)
@@ -365,7 +370,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           activeNodeId={activeNodeId}
           lastTriggerTime={lastTriggerTime}
           savedTracks={savedTracks}
-          addSavedTrack={addSavedTrack}
+          addSavedTrack={(track) => saveTrackToTab(tabId, track)}
         />
       </Canvas>
 

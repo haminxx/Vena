@@ -67,7 +67,17 @@ export async function initStrudel() {
 let strudelInitialized = false
 
 export default function SyncView({ dark = false }) {
-  const savedTracks = useAppStore((s) => s.savedTracks) ?? []
+  const savedTracks = useAppStore((s) => {
+    const diggingTabs = s.tabs.filter((t) => t.type === 'digging')
+    const all = diggingTabs.flatMap((t) => t?.data?.savedTracks ?? [])
+    const seen = new Set()
+    return all.filter((x) => {
+      const id = x?.id ?? x?.spotifyId
+      if (id && seen.has(id)) return false
+      if (id) seen.add(id)
+      return true
+    })
+  })
   const syncIsPlaying = useAppStore((s) => s.syncIsPlaying)
   const [ready, setReady] = useState(false)
   const [processing, setProcessing] = useState(false)

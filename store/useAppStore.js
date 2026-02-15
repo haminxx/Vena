@@ -6,11 +6,11 @@ import { persist } from 'zustand/middleware'
 const TAB_ID_PREFIX = 'tab-'
 const INITIAL_TAB_ID = 'tab-initial'
 
-const DEFAULT_GRAPH_STATE = {
-  nodes: [],
-  links: [],
+const DEFAULT_TAB_DATA = {
+  graphNodes: [],
+  graphLinks: [],
   cameraPosition: [0, 0, 10],
-  focusNodeId: null,
+  savedTracks: [],
 }
 
 function createTabId() {
@@ -24,14 +24,10 @@ function createNewTab(type = 'new-tab', id = null) {
     title: null,
     history: type === 'new-tab' ? [] : [{ query: '', graphData: null }],
     currentIndex: 0,
-    graphState: { ...DEFAULT_GRAPH_STATE },
+    data: { ...DEFAULT_TAB_DATA },
   }
 }
 
-/**
- * navigationSlice: Persists history stack, currentIndex, breadcrumb path.
- * Survives page reload and tab switch. Storage key: music-os-history.
- */
 function createNavigationSlice(set, get) {
   return {
     tabs: [createNewTab('new-tab', INITIAL_TAB_ID)],
@@ -48,7 +44,7 @@ function createNavigationSlice(set, get) {
       return tab.id
     },
 
-    removeTab: (tabId) => {
+    closeTab: (tabId) => {
       const { tabs, activeTabId } = get()
       const next = tabs.filter((t) => t.id !== tabId)
       const newTabs = next.length > 0 ? next : [createNewTab('new-tab')]
@@ -59,8 +55,13 @@ function createNavigationSlice(set, get) {
     updateTab: (tabId, updater) =>
       set((s) => ({
         tabs: s.tabs.map((t) =>
-          t.id === tabId ? (typeof updater === 'function' ? updater(t) : { ...t, ...updater }) : t
+          t.id !== tabId ? t : (typeof updater === 'function' ? updater(t) : { ...t, ...updater })
         ),
+      })),
+
+    updateTabTitle: (tabId, newTitle) =>
+      set((s) => ({
+        tabs: s.tabs.map((t) => (t.id !== tabId ? t : { ...t, title: newTitle ?? t.title })),
       })),
 
     setTabType: (tabId, type, initialState = null) =>
@@ -70,38 +71,94 @@ function createNavigationSlice(set, get) {
           const isNewTab = t.type === 'new-tab'
           const history = isNewTab ? [initialState ?? { query: '', graphData: null }] : t.history
           const title = initialState?.graphData?.title ?? initialState?.query ?? null
-          const graphState = isNewTab && type === 'digging'
-            ? { ...DEFAULT_GRAPH_STATE }
-            : (t.graphState ?? { ...DEFAULT_GRAPH_STATE })
-          return { ...t, type, title, history, currentIndex: 0, graphState }
+          const data = isNewTab ? { ...DEFAULT_TAB_DATA } : { ...DEFAULT_TAB_DATA, ...t.data }
+          return { ...t, type, title, history, currentIndex: 0, data }
         }),
       })),
   }
 }
 
-/**
- * savedTracksSlice: Tracks saved from Digging for use in Sync tab.
- */
-function createSavedTracksSlice(set) {
+function createTabDataSlice(set) {
   return {
-    savedTracks: [],
-
-    addSavedTrack: (track) =>
+    saveTrackToTab: (tabId, track) =>
       set((s) => {
-        const exists = s.savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))
+        const tab = s.tabs.find((t) => t.id === tabId)
+        if (!tab) return s
+        const saved = tab.data?.savedTracks ?? []
+        const exists = saved.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))
         if (exists) return s
         const bpm = track?.audioFeatures?.tempo ?? 120
-        return { savedTracks: [...s.savedTracks, { ...track, bpm }] }
+        const newTrack = { ...track, bpm }
+        return {
+          tabs: s.tabs.map((t) =>
+            t.id !== tabId
+              ? t
+              : { ...t, data: { ...(t.data ?? DEFAULT_TAB_DATA), savedTracks: [...saved, newTrack] } }
+          ),
+        }
       }),
 
-    removeSavedTrack: (trackId) =>
-      set((s) => ({ savedTracks: s.savedTracks.filter((t) => (t.id ?? t.spotifyId) !== trackId) })),
+    removeSavedTrackFromTab: (tabId, trackId) =>
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.id !== tabId
+            ? t
+            : {
+                ...t,
+                data: {
+                  ...(t.data ?? DEFAULT_TAB_DATA),
+                  savedTracks: (t.data?.savedTracks ?? []).filter(
+                    (x) => (x.id ?? x.spotifyId) !== trackId
+                  ),
+                },
+              }
+        ),
+      })),
+
+    updateTabGraph: (tabId, nodes, links, focusNodeId = null) =>
+      set((s) => ({
+        tabs: s.tabs.map((t) => {
+          if (t.id !== tabId) return t
+          const d = t.data ?? { ...DEFAULT_TAB_DATA }
+          return {
+            ...t,
+            data: {
+              ...d,
+              graphNodes: nodes ?? d.graphNodes,
+              graphLinks: links ?? d.graphLinks,
+              focusNodeId: focusNodeId ?? d.focusNodeId,
+            },
+          }
+        }),
+      })),
+
+    setDiggingState: (tabId, state) =>
+      set((s) => ({
+        tabs: s.tabs.map((t) => {
+          if (t.id !== tabId) return t
+          const d = t.data ?? { ...DEFAULT_TAB_DATA }
+          return {
+            ...t,
+            data: {
+              ...d,
+              graphNodes: state.nodes ?? d.graphNodes,
+              graphLinks: state.links ?? d.graphLinks,
+              focusNodeId: state.focusNodeId ?? d.focusNodeId,
+              cameraPosition: state.cameraPosition ?? d.cameraPosition,
+            },
+          }
+        }),
+      })),
+
+    clearDiggingState: (tabId) =>
+      set((s) => ({
+        tabs: s.tabs.map((t) =>
+          t.id !== tabId ? t : { ...t, data: { ...(t.data ?? DEFAULT_TAB_DATA), ...DEFAULT_TAB_DATA } }
+        ),
+      })),
   }
 }
 
-/**
- * strudelTriggerSlice: Receives beat triggers from Strudel for graph pulse.
- */
 function createStrudelTriggerSlice(set) {
   return {
     lastTriggerTime: 0,
@@ -109,9 +166,6 @@ function createStrudelTriggerSlice(set) {
   }
 }
 
-/**
- * syncPlaybackSlice: Play/Stop state for Sync tab (Strudel + Spotify).
- */
 function createSyncPlaybackSlice(set) {
   return {
     syncIsPlaying: false,
@@ -119,55 +173,37 @@ function createSyncPlaybackSlice(set) {
   }
 }
 
-/**
- * diggingSlice: Graph state lives inside each tab (per-tab graphState).
- */
-function createDiggingSlice(set) {
-  return {
-    setDiggingState: (tabId, state) =>
-      set((s) => ({
-        tabs: s.tabs.map((t) =>
-          t.id !== tabId ? t : { ...t, graphState: { ...(t.graphState ?? DEFAULT_GRAPH_STATE), ...state } }
-        ),
-      })),
-
-    clearDiggingState: (tabId) =>
-      set((s) => ({
-        tabs: s.tabs.map((t) =>
-          t.id !== tabId ? t : { ...t, graphState: { ...DEFAULT_GRAPH_STATE } }
-        ),
-      })),
-  }
-}
-
 export const useAppStore = create(
   persist(
     (set, get) => ({
-      ...createDiggingSlice(set),
       ...createNavigationSlice(set, get),
-      ...createSavedTracksSlice(set),
+      ...createTabDataSlice(set),
       ...createStrudelTriggerSlice(set),
       ...createSyncPlaybackSlice(set),
     }),
     {
       name: 'music-os-history',
-      version: 2,
+      version: 3,
       partialize: (s) => ({
         tabs: s.tabs,
         activeTabId: s.activeTabId,
-        savedTracks: s.savedTracks,
       }),
       merge: (persisted, current) => {
         const p = persisted ?? {}
         const tabs = (p.tabs ?? current.tabs ?? []).map((t) => {
-          const gs = t.graphState ?? p.diggingByTab?.[t.id] ?? DEFAULT_GRAPH_STATE
-          return { ...t, graphState: { ...DEFAULT_GRAPH_STATE, ...gs } }
+          const legacy = t.graphState ?? p.diggingByTab?.[t.id]
+          const data = t.data ?? {
+            ...DEFAULT_TAB_DATA,
+            graphNodes: legacy?.nodes ?? [],
+            graphLinks: legacy?.links ?? [],
+            focusNodeId: legacy?.focusNodeId,
+          }
+          return { ...t, data: { ...DEFAULT_TAB_DATA, ...data } }
         })
         return {
           ...current,
           tabs: tabs.length ? tabs : current.tabs,
           activeTabId: p.activeTabId ?? current.activeTabId,
-          savedTracks: p.savedTracks ?? current.savedTracks,
         }
       },
     }

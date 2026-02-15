@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette, Home, Play, Square } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RotateCw, Plus, Palette, Home, Play, Square, X } from 'lucide-react'
 import { useBrowserState } from '@/context/BrowserState'
 import { useTabHistory } from '@/hooks/useTabHistory'
 import { useAppStore } from '@/store/useAppStore'
@@ -19,7 +19,7 @@ const TAB_LABELS = {
 }
 
 export default function BrowserLayout() {
-  const { tabs, activeTabId, setActiveTabId, addTab, setTabType, theme, setTheme } = useBrowserState()
+  const { tabs, activeTabId, setActiveTabId, addTab, closeTab, setTabType, theme, setTheme } = useBrowserState()
   const clearDiggingState = useAppStore((s) => s.clearDiggingState)
   const setDiggingState = useAppStore((s) => s.setDiggingState)
   const {
@@ -122,7 +122,8 @@ export default function BrowserLayout() {
 
   const getTabGraphState = useCallback(() => {
     const t = useAppStore.getState().tabs.find((x) => x.id === activeTabId)
-    return t?.graphState ?? null
+    const d = t?.data ?? {}
+    return d?.graphNodes?.length ? { nodes: d.graphNodes, links: d.graphLinks, focusNodeId: d.focusNodeId } : null
   }, [activeTabId])
 
   const handleBack = useCallback(() => {
@@ -193,8 +194,8 @@ export default function BrowserLayout() {
 
   const isDark = theme === 'dark'
   const chromeBg = isDark ? 'bg-gray-800' : 'bg-chrome-gray'
-  const chromeTabInactive = isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-600'
-  const chromeTabActive = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+  const chromeTabInactive = isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-300 text-gray-600 hover:bg-gray-400/50'
+  const chromeTabActive = isDark ? 'bg-white text-black rounded-t-lg border-t-2 border-blue-500' : 'bg-white text-black rounded-t-lg border-t-2 border-blue-500'
   const toolbarBg = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
   const contentBg = isDark ? 'bg-gray-950' : 'bg-white'
   const inputBg = isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'
@@ -203,22 +204,36 @@ export default function BrowserLayout() {
     <div className={`min-h-screen flex flex-col rounded-t-xl overflow-hidden shadow-lg ${chromeBg}`}>
       {/* Tab Bar */}
       <div className={`flex items-end px-2 pt-2 gap-0.5 ${chromeBg}`}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTabId(tab.id)}
-            className={`px-5 py-2 rounded-t-lg -mb-px border border-b-0 transition-colors z-0 ${
-              activeTabId === tab.id ? `${chromeTabActive} shadow-sm z-10` : `${chromeTabInactive} hover:opacity-90`
-            }`}
-            style={
-              activeTabId === tab.id
-                ? { clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%)' }
-                : undefined
-            }
-          >
-            <span className="text-sm font-medium">{TAB_LABELS[tab.type] ?? tab.type}</span>
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const isActive = activeTabId === tab.id
+          const tabLabel = tab.title || (TAB_LABELS[tab.type] ?? tab.type)
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTabId(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-t-lg -mb-px border border-b-0 transition-none z-0 ${
+                isActive ? `${chromeTabActive} shadow-sm z-10` : chromeTabInactive
+              }`}
+              style={
+                isActive
+                  ? { clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%)' }
+                  : undefined
+              }
+            >
+              <span className="text-sm font-medium truncate max-w-[140px]">{tabLabel}</span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation()
+                  closeTab(tab.id)
+                }}
+                className={`p-0.5 rounded hover:bg-black/10 -mr-1 ${isActive ? 'hover:bg-black/15' : ''}`}
+                aria-label="Close tab"
+              >
+                <X className="w-3.5 h-3.5" />
+              </span>
+            </button>
+          )
+        })}
         <button
           onClick={addTab}
           className="p-2 rounded-lg -mb-px hover:bg-gray-600/30 transition-colors text-gray-500 hover:text-gray-700"

@@ -5,6 +5,7 @@ import { TrendingUp } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { parseSearchMetadata } from '@/utils/parseSearchMetadata'
 import OmniSearch from './OmniSearch'
+import TabSavedMenu from './TabSavedMenu'
 import { useBrowserState } from '@/context/BrowserState'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -73,11 +74,16 @@ export default function DiggingView({
   initialGraphData = null,
 }) {
   const { activeTabId } = useBrowserState()
-  const graphState = useAppStore((s) => {
+  const tabData = useAppStore((s) => {
     const t = s.tabs.find((x) => x.id === activeTabId)
-    return t?.graphState ?? { nodes: [], links: [], focusNodeId: null }
+    const d = t?.data ?? {}
+    return {
+      nodes: d.graphNodes ?? [],
+      links: d.graphLinks ?? [],
+      focusNodeId: d.focusNodeId ?? null,
+    }
   })
-  const persisted = graphState
+  const persisted = tabData
   const hasPersistedGraph = (persisted?.nodes?.length ?? 0) > 0
 
   const [searchInput, setSearchInput] = useState(initialQuery)
@@ -120,13 +126,14 @@ export default function DiggingView({
       setRecentSearches(getRecentSearches())
       setSelectedTrack(track)
       setSearchInput([meta.title, meta.artist].filter(Boolean).join(' '))
+      useAppStore.getState().updateTabTitle(activeTabId, [track?.title, typeof track?.artist === 'string' ? track.artist : track?.artist?.name].filter(Boolean).join(' - ') || track?.title || 'Untitled')
       onSelectTrack?.(track)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [searchInput, onSelectTrack])
+  }, [searchInput, onSelectTrack, activeTabId])
 
   const handleSelectSuggestion = useCallback(
     (item) => {
@@ -158,6 +165,7 @@ export default function DiggingView({
   if (is3DActive) {
     return (
       <div className="absolute inset-0 w-full h-full flex flex-col">
+        <TabSavedMenu dark={dark} />
         <DiggingCube
           dark={dark}
           tabId={activeTabId}
@@ -170,6 +178,9 @@ export default function DiggingView({
             useAppStore.getState().clearDiggingState(activeTabId)
           }}
           onExpandNode={onExpandNode}
+          onSelectNode={(track) => {
+            useAppStore.getState().updateTabTitle(activeTabId, [track?.title, typeof track?.artist === 'string' ? track.artist : track?.artist?.name].filter(Boolean).join(' - ') || track?.title || 'Untitled')
+          }}
         />
       </div>
     )

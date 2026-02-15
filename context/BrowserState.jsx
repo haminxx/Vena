@@ -10,7 +10,7 @@ export function BrowserStateProvider({ children }) {
   const activeTabId = useAppStore((s) => s.activeTabId)
   const setActiveTabId = useAppStore((s) => s.setActiveTabId)
   const addTab = useAppStore((s) => s.addTab)
-  const removeTab = useAppStore((s) => s.removeTab)
+  const closeTab = useAppStore((s) => s.closeTab)
   const updateTab = useAppStore((s) => s.updateTab)
   const setTabType = useAppStore((s) => s.setTabType)
 
@@ -33,13 +33,13 @@ export function BrowserStateProvider({ children }) {
       activeTabId,
       setActiveTabId,
       addTab,
-      removeTab,
+      closeTab,
       updateTab,
       setTabType,
       theme,
       setTheme,
     }),
-    [tabs, activeTabId, setActiveTabId, addTab, removeTab, updateTab, setTabType, theme, setTheme]
+    [tabs, activeTabId, setActiveTabId, addTab, closeTab, updateTab, setTabType, theme, setTheme]
   )
 
   return <BrowserStateContext.Provider value={value}>{children}</BrowserStateContext.Provider>
