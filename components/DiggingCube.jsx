@@ -144,6 +144,7 @@ function Scene({
                       onClose={onClose}
                       hasPreview={!!track?.previewUrl}
                       isFetchingPreview={previewFetchingFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
+                      previewUnavailable={previewUnavailableFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
                       isSaved={isSaved}
                     />
                   </div>
@@ -280,9 +281,11 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   // Pre-fetch Spotify preview when menu opens so Play works immediately (avoids async/autoplay block)
   const [previewFetchingFor, setPreviewFetchingFor] = useState(null)
+  const [previewUnavailableFor, setPreviewUnavailableFor] = useState(null)
   useEffect(() => {
     if (!selectedNodeId) {
       setPreviewFetchingFor(null)
+      setPreviewUnavailableFor(null)
       return
     }
     if (!nodes.length) return
@@ -296,6 +299,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       if (hasLookup) {
         const trackKey = track?.id ?? track?.videoId ?? track?.spotifyId
         setPreviewFetchingFor(selectedNodeId)
+        setPreviewUnavailableFor(null)
         const params = new URLSearchParams()
         if (track?.spotifyId) params.set('spotifyId', track.spotifyId)
         else { params.set('artist', artist); params.set('track', trackName) }
@@ -310,13 +314,19 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
                     : n
                 )
               )
+              setPreviewUnavailableFor(null)
+            } else {
+              setPreviewUnavailableFor(trackKey)
             }
           })
-          .catch(() => {})
+          .catch(() => setPreviewUnavailableFor(trackKey))
           .finally(() => setPreviewFetchingFor(null))
+      } else {
+        setPreviewUnavailableFor(track?.id ?? track?.videoId ?? track?.spotifyId)
       }
     } else {
       setPreviewFetchingFor(null)
+      setPreviewUnavailableFor(null)
     }
   }, [selectedNodeId, nodes])
 

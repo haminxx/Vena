@@ -21,11 +21,17 @@ export function AudioPlayerProvider({ children }) {
   }, [])
 
   const play = useCallback((url) => {
-    if (!url) return
+    if (!url || typeof url !== 'string' || url.trim() === '') {
+      console.log('Fetching preview...')
+      return
+    }
     const audio = getOrCreateAudio()
     if (playRef.current === url) {
       if (audio.paused) {
-        audio.play().catch((e) => console.error('Play failed:', e))
+        const playPromise = audio.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((e) => console.error('Autoplay prevented:', e))
+        }
       } else {
         audio.pause()
         setPlayingUrl(null)
@@ -35,9 +41,13 @@ export function AudioPlayerProvider({ children }) {
     }
     audio.pause()
     audio.src = url
+    audio.volume = 0.5
     playRef.current = url
     setPlayingUrl(url)
-    audio.play().catch((e) => console.error('Autoplay blocked:', e))
+    const playPromise = audio.play()
+    if (playPromise !== undefined) {
+      playPromise.catch((e) => console.error('Autoplay prevented:', e))
+    }
   }, [getOrCreateAudio])
 
   const pause = useCallback(() => {

@@ -14,8 +14,17 @@ export default function NodeActionMenu({
   onClose,
   hasPreview = false,
   isFetchingPreview = false,
+  previewUnavailable = false,
   isSaved = false,
 }) {
+  const playTooltip = hasPreview
+    ? 'Play 30s preview'
+    : isFetchingPreview
+      ? 'Loading preview...'
+      : previewUnavailable
+        ? 'No Preview Available on Spotify'
+        : 'No preview available'
+
   return (
     <div
       className="w-[300px] rounded-xl overflow-hidden bg-black/70 backdrop-blur-md border border-white/10 shadow-xl"
@@ -32,7 +41,7 @@ export default function NodeActionMenu({
               ? 'bg-[#1DB954] text-white hover:bg-[#1ed760]'
               : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
           }`}
-          title={hasPreview ? 'Play 30s preview' : isFetchingPreview ? 'Loading preview...' : 'No preview available'}
+          title={playTooltip}
         >
           <Play className="w-4 h-4 fill-current" />
           <span>{isFetchingPreview ? 'Loading...' : 'Play'}</span>
