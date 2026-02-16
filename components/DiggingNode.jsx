@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Billboard, Html } from '@react-three/drei'
+import { MoreVertical } from 'lucide-react'
 import * as THREE from 'three'
 
 const NODE_RADIUS = 0.5
@@ -124,8 +125,7 @@ export default function DiggingNode({
     img.src = imageUrl
   }, [isHovered, isSelected, imageUrl, onExtractColor])
 
-  const eventHandlers = {
-    onClick: (e) => { e.stopPropagation(); onClick(track) },
+  const pointerHandlers = {
     onPointerOver: (e) => {
       e.stopPropagation()
       document.body.style.cursor = 'pointer'
@@ -141,7 +141,7 @@ export default function DiggingNode({
   return (
     <group ref={groupRef}>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <mesh {...eventHandlers} renderOrder={1} frustumCulled={false}>
+        <mesh {...pointerHandlers} renderOrder={1} frustumCulled={false}>
           <circleGeometry args={[NODE_RADIUS, 32]} />
           {texture ? (
             <meshBasicMaterial
@@ -166,11 +166,13 @@ export default function DiggingNode({
         <Html
           position={[0, NODE_RADIUS + 0.2, 0]}
           center
-          style={{ pointerEvents: 'none', textAlign: 'center', width: 200 }}
+          style={{ pointerEvents: 'auto', textAlign: 'center', width: 200 }}
           className={POPUP_WIDTH}
         >
           <div
-            className={`${POPUP_WIDTH} rounded-lg px-3 py-2 bg-black/70 backdrop-blur-md border border-white/10`}
+            className={`${POPUP_WIDTH} rounded-lg px-3 py-2 bg-black/70 backdrop-blur-md border border-white/10 relative`}
+            onPointerOver={(e) => { e.stopPropagation(); onPointerOver(track) }}
+            onPointerOut={(e) => { e.stopPropagation(); onPointerOut() }}
             style={{
               whiteSpace: 'nowrap',
               fontSize: '11px',
@@ -179,8 +181,22 @@ export default function DiggingNode({
               textShadow: '0 1px 3px rgba(0,0,0,0.8)',
             }}
           >
-            <div className="block mb-0.5 truncate">{songTitle}</div>
+            <div className="block mb-0.5 truncate pr-6">{songTitle}</div>
             <div className="text-[10px] font-normal opacity-90 truncate">{artistName}</div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onClick?.(track)
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1 rounded hover:bg-white/20 transition-colors pointer-events-auto"
+              style={{ pointerEvents: 'auto' }}
+              aria-label="Open menu"
+              title="Open menu"
+            >
+              <MoreVertical className="w-4 h-4 text-white" strokeWidth={2} />
+            </button>
           </div>
         </Html>
       )}

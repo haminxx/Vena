@@ -83,6 +83,7 @@ function Scene({
   lastTriggerTime,
   savedTracks,
   addSavedTrack,
+  loadingSimilar,
 }) {
   return (
     <>
@@ -123,7 +124,7 @@ function Scene({
               isActiveNode={activeNodeId === track.id || activeNodeId === track.spotifyId}
               lastTriggerTime={lastTriggerTime}
             />
-            {isMenuOpen && !isCardOpen && (
+            {isMenuOpen && !isCardOpen && !loadingSimilar && (
               <Billboard follow lockX={false} lockY={false} lockZ={false}>
                 <Html
                   position={[0, NODE_RADIUS + 0.3, 0]}
@@ -267,6 +268,34 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     if (storedNodes === nodes && storedLinks === links) return
     setDiggingState(tabId, { ...d, nodes, links })
   }, [tabId, nodes, links, setDiggingState])
+
+  // Pre-fetch Spotify preview when menu opens so Play works immediately (avoids async/autoplay block)
+  useEffect(() => {
+    if (!selectedNodeId || !nodes.length) return
+    const track = nodes.find(
+      (n) => (n.id ?? n.videoId ?? n.spotifyId) === selectedNodeId
+    )
+    if (!track?.previewUrl) {
+      const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
+      const trackName = track?.title ?? ''
+      if (artist || trackName) {
+        const params = new URLSearchParams({ artist, track: trackName })
+        fetch(`/api/enrich-track-spotify?${params}`)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data?.previewUrl) {
+              const key = track?.id ?? track?.videoId ?? track?.spotifyId
+              setNodes((prev) =>
+                prev.map((n) =>
+                  (n.id ?? n.videoId ?? n.spotifyId) === key ? { ...n, previewUrl: data.previewUrl } : n
+                )
+              )
+            }
+          })
+          .catch(() => {})
+      }
+    }
+  }, [selectedNodeId, nodes])
 
   const fetchSimilar = useCallback(async (track) => {
     const videoId = track.videoId ?? null
@@ -450,6 +479,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           lastTriggerTime={lastTriggerTime}
           savedTracks={savedTracks}
           addSavedTrack={handleSaveTrack}
+          loadingSimilar={loadingSimilar}
         />
       </Canvas>
 
