@@ -11,13 +11,13 @@ export async function GET(request) {
     const track = searchParams.get('track')?.trim()
 
     if (!artist && !track) {
-      return NextResponse.json({ spotifyId: null }, { status: 400 })
+      return NextResponse.json({ spotifyId: null, previewUrl: null }, { status: 400 })
     }
 
     const clientId = process.env.SPOTIFY_CLIENT_ID
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET
     if (!clientId || !clientSecret) {
-      return NextResponse.json({ spotifyId: null })
+      return NextResponse.json({ spotifyId: null, previewUrl: null })
     }
 
     const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
@@ -30,7 +30,7 @@ export async function GET(request) {
       }),
     })
 
-    if (!tokenRes.ok) return NextResponse.json({ spotifyId: null })
+    if (!tokenRes.ok) return NextResponse.json({ spotifyId: null, previewUrl: null })
 
     const { access_token } = await tokenRes.json()
     const headers = { Authorization: `Bearer ${access_token}` }
@@ -41,15 +41,16 @@ export async function GET(request) {
       { headers }
     )
 
-    if (!searchRes.ok) return NextResponse.json({ spotifyId: null })
+    if (!searchRes.ok) return NextResponse.json({ spotifyId: null, previewUrl: null })
 
     const data = await searchRes.json()
     const first = data.tracks?.items?.[0]
     const spotifyId = first?.id ?? null
+    const previewUrl = first?.preview_url ?? null
 
-    return NextResponse.json({ spotifyId })
+    return NextResponse.json({ spotifyId, previewUrl })
   } catch (err) {
     console.error('[enrich-track-spotify]', err)
-    return NextResponse.json({ spotifyId: null })
+    return NextResponse.json({ spotifyId: null, previewUrl: null })
   }
 }

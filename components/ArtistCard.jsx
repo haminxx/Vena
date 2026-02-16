@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Play, X, ExternalLink } from 'lucide-react'
+import { Play, X } from 'lucide-react'
 import { useAudioPlayer } from '@/context/AudioPlayerContext'
 import { useMoodBackground } from '@/context/MoodBackgroundContext'
 
@@ -16,6 +16,8 @@ export default function ArtistCard({ track, onClose }) {
   const [loading, setLoading] = useState(false)
   const [artistImageLarge, setArtistImageLarge] = useState(null)
   const [artistNameFromApi, setArtistNameFromApi] = useState('')
+  const [genres, setGenres] = useState([])
+  const [playingItemKey, setPlayingItemKey] = useState(null)
 
   const artistName = artistNameFromApi || (typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? '')
   const avatarUrl = artistImageLarge ?? track?.artistImageLarge ?? track?.artistImage ?? track?.image ?? `https://i.pravatar.cc/80?u=${track?.id}`
@@ -30,7 +32,10 @@ export default function ArtistCard({ track, onClose }) {
   }, [track?.id, stop, setPlayingTrack])
 
   useEffect(() => {
-    if (!playingUrl) setPlayingTrack(null)
+    if (!playingUrl) {
+      setPlayingTrack(null)
+      setPlayingItemKey(null)
+    }
   }, [playingUrl, setPlayingTrack])
 
   useEffect(() => {
@@ -42,6 +47,7 @@ export default function ArtistCard({ track, onClose }) {
       setPopularTracks([])
       setArtistImageLarge(null)
       setArtistNameFromApi('')
+      setGenres([])
       return
     }
 
@@ -57,21 +63,42 @@ export default function ArtistCard({ track, onClose }) {
         setPopularTracks(d.popularTracks ?? [])
         setArtistImageLarge(d.imageLarge ?? d.image ?? null)
         setArtistNameFromApi(d.artistName ?? '')
+        setGenres(Array.isArray(d.genres) ? d.genres : [])
       })
       .catch(() => {
         setPopularTracks([])
         setArtistImageLarge(null)
         setArtistNameFromApi('')
+        setGenres([])
       })
       .finally(() => setLoading(false))
   }, [track?.id, track?.videoId, track?.artist, track?.title])
 
-  const handlePlay = (item) => {
-    if (item?.preview) {
-      play(item.preview)
+  const getItemKey = (item, i) => item?.videoId ?? item?.id ?? `${item?.name ?? item?.title ?? ''}-${i}`
+
+  const handlePlay = async (item, i) => {
+    const key = getItemKey(item, i)
+    let url = item?.preview
+    if (url) {
+      play(url)
       setPlayingTrack({ ...track })
-    } else if (item?.videoId) {
-      window.open(`https://music.youtube.com/watch?v=${item.videoId}`, '_blank', 'noopener,noreferrer')
+      setPlayingItemKey(key)
+      return
+    }
+    const artist = typeof item?.artist === 'string' ? item.artist : item?.artist?.name ?? ''
+    const trackName = item?.name ?? item?.title ?? ''
+    if (artist || trackName) {
+      try {
+        const params = new URLSearchParams({ artist, track: trackName })
+        const res = await fetch(`/api/enrich-track-spotify?${params}`)
+        const data = await res.json()
+        url = data?.previewUrl ?? null
+        if (url) {
+          play(url)
+          setPlayingTrack({ ...track })
+          setPlayingItemKey(key)
+        }
+      } catch (_) { /* ignore */ }
     }
   }
 
@@ -107,9 +134,19 @@ export default function ArtistCard({ track, onClose }) {
             {loading ? (
               <p className="text-xs text-gray-400 mt-1">Loading...</p>
             ) : (
-              <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/60 text-gray-500">
-                YouTube Music
-              </span>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {genres.length > 0 ? (
+                  genres.map((g, i) => (
+                    <span key={i} className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/60 text-gray-600">
+                      {g}
+                    </span>
+                  ))
+                ) : (
+                  <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/60 text-gray-500">
+                    YouTube Music
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -124,26 +161,30 @@ export default function ArtistCard({ track, onClose }) {
             style={{ scrollbarWidth: 'thin' }}
           >
             {displayTracks.length > 0 ? (
-              displayTracks.map((t, i) => (
-                <li
-                  key={t.id ?? t.videoId ?? i}
-                  className="flex items-center justify-between gap-2 py-2 px-2 rounded-lg hover:bg-white/50 transition-colors group"
-                >
-                  <span className="text-sm text-gray-800 truncate flex-1">{t.name ?? t.title}</span>
-                  <button
-                    onClick={() => handlePlay(t)}
-                    className="p-2 rounded-full shrink-0 transition-colors text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                    aria-label={t.videoId ? 'Open in YouTube Music' : 'No link'}
-                    title={t.videoId ? 'Open in YouTube Music' : ''}
+              displayTracks.map((t, i) => {
+                const itemKey = getItemKey(t, i)
+                const isPlaying = playingItemKey === itemKey
+                const canPlay = !!t.preview || !!(t.name ?? t.title) || !!(typeof t.artist === 'string' ? t.artist : t?.artist?.name)
+                return (
+                  <li
+                    key={t.id ?? t.videoId ?? i}
+                    className="flex items-center justify-between gap-2 py-2 px-2 rounded-lg hover:bg-white/50 transition-colors group"
                   >
-                    {t.videoId ? (
-                      <ExternalLink className="w-4 h-4" />
-                    ) : (
-                      <Play className={`w-4 h-4 ${playingUrl === t.preview ? 'fill-current text-blue-600' : 'text-gray-300'}`} />
-                    )}
-                  </button>
-                </li>
-              ))
+                    <span className="text-sm text-gray-800 truncate flex-1">{t.name ?? t.title}</span>
+                    <button
+                      onClick={() => handlePlay(t, i)}
+                      disabled={!canPlay}
+                      className={`p-2 rounded-full shrink-0 transition-colors ${
+                        canPlay ? 'text-gray-500 hover:text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'
+                      }`}
+                      aria-label="Play 30s preview from Spotify"
+                      title="Play 30s preview from Spotify"
+                    >
+                      <Play className={`w-4 h-4 ${isPlaying ? 'fill-current text-blue-600' : ''}`} />
+                    </button>
+                  </li>
+                )
+              })
             ) : (
               <li className="text-sm text-gray-400 py-4 text-center">No tracks available</li>
             )}

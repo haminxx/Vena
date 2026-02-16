@@ -107,10 +107,11 @@ function Scene({
 
       {nodes.map((track) => {
         const pos = safePosition(track.position)
-        const isMenuOpen = selectedNodeId === track.id
-        const isCardOpen = showCardTrackId === track.id
+        const trackKey = track?.id ?? track?.videoId ?? track?.spotifyId
+        const isMenuOpen = selectedNodeId === track.id || selectedNodeId === track?.videoId || selectedNodeId === track?.spotifyId
+        const isCardOpen = showCardTrackId === trackKey
         return (
-          <group key={track.id} position={pos}>
+          <group key={trackKey ?? track.id ?? 'node'} position={pos}>
             <DiggingNode
               track={track}
               isHovered={hoveredTrack?.id === track.id}
@@ -137,7 +138,10 @@ function Scene({
                       onAbout={() => onAbout(track)}
                       onSave={() => addSavedTrack(track)}
                       onClose={onClose}
-                      hasPreview={!!track?.previewUrl}
+                      hasPreview={
+                        !!track?.previewUrl ||
+                        (!!track?.title && !!(typeof track?.artist === 'string' ? track.artist : track?.artist?.name))
+                      }
                       isSaved={savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))}
                     />
                   </div>
@@ -181,7 +185,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   const handleSaveTrack = useCallback(async (track) => {
     let enriched = { ...track }
-    if (!enriched.spotifyId) {
+    if (!enriched.spotifyId || !enriched.previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
       if (artist || trackName) {
@@ -190,6 +194,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           const res = await fetch(`/api/enrich-track-spotify?${params}`)
           const data = await res.json()
           if (data?.spotifyId) enriched = { ...enriched, spotifyId: data.spotifyId }
+          if (data?.previewUrl) enriched = { ...enriched, previewUrl: data.previewUrl }
         } catch (_) { /* ignore */ }
       }
     }
@@ -324,8 +329,29 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     if (isSelecting) onSelectNode?.(track)
   }, [onSelectNode, selectedNodeId])
 
-  const handlePlay = useCallback((track) => {
-    if (track?.previewUrl) play(track.previewUrl)
+  const handlePlay = useCallback(async (track) => {
+    let previewUrl = track?.previewUrl
+    if (!previewUrl) {
+      const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
+      const trackName = track?.title ?? ''
+      if (artist || trackName) {
+        try {
+          const params = new URLSearchParams({ artist, track: trackName })
+          const res = await fetch(`/api/enrich-track-spotify?${params}`)
+          const data = await res.json()
+          previewUrl = data?.previewUrl ?? null
+          if (previewUrl) {
+            const key = track?.id ?? track?.videoId ?? track?.spotifyId
+            setNodes((prev) =>
+              prev.map((n) =>
+                (n.id ?? n.videoId ?? n.spotifyId) === key ? { ...n, previewUrl } : n
+              )
+            )
+          }
+        } catch (_) { /* ignore */ }
+      }
+    }
+    if (previewUrl) play(previewUrl)
   }, [play])
 
   const handleExpand = useCallback(
@@ -337,9 +363,11 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     [fetchSimilar, onExpandNode]
   )
 
+  const justOpenedCardRef = useRef(false)
   const handleAbout = useCallback((track) => {
+    justOpenedCardRef.current = true
     setSelectedNodeId(null)
-    setShowCardTrackId(track?.id ?? null)
+    setShowCardTrackId(track?.id ?? track?.videoId ?? track?.spotifyId ?? null)
   }, [])
 
   const handleClose = useCallback(() => {
@@ -386,7 +414,14 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
         gl={{ antialias: true, alpha: false }}
         style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => gl.setClearColor(dark ? '#0a0a0a' : '#0f0f0f')}
-        onPointerMissed={() => { setSelectedNodeId(null); setShowCardTrackId(null) }}
+        onPointerMissed={() => {
+          if (justOpenedCardRef.current) {
+            justOpenedCardRef.current = false
+            return
+          }
+          setSelectedNodeId(null)
+          setShowCardTrackId(null)
+        }}
       >
         <color attach="background" args={[dark ? '#0a0a0a' : '#0f0f0f']} />
         <CameraControls
