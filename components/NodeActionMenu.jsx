@@ -1,49 +1,22 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
 import { Play, Bookmark, Network, Info } from 'lucide-react'
 
 /**
- * Fixed-size (300px) action menu. Top row: Play, Save. Bottom: Expand, About.
- * Uses Html without transform for fixed pixel size regardless of zoom.
- * Renders a hidden audio element when previewUrl exists; Play button triggers it directly (user gesture).
+ * Fixed-size (300px) action menu. Top row: Spotify embed or placeholder, Save. Bottom: Expand, About.
+ * Uses Spotify embed for 30s preview (works without login). Expand still uses YouTube Music.
  */
 export default function NodeActionMenu({
-  onPlay,
   onExpand,
   onAbout,
   onSave,
   onClose,
-  hasPreview = false,
-  previewUrl = null,
-  isFetchingPreview = false,
-  previewUnavailable = false,
+  spotifyId = null,
+  isFetchingSpotify = false,
+  spotifyUnavailable = false,
   isSaved = false,
 }) {
-  const audioRef = useRef(null)
-
-  useEffect(() => {
-    if (audioRef.current && previewUrl) {
-      audioRef.current.src = previewUrl
-    }
-  }, [previewUrl])
-
-  const handlePlayClick = () => {
-    if (hasPreview && previewUrl && audioRef.current) {
-      audioRef.current.currentTime = 0
-      audioRef.current.play().catch((e) => console.error('Play failed:', e))
-    } else {
-      onPlay?.()
-    }
-  }
-
-  const playTooltip = hasPreview
-    ? 'Play 30s preview'
-    : isFetchingPreview
-      ? 'Loading preview...'
-      : previewUnavailable
-        ? 'No Preview Available on Spotify'
-        : 'No preview available'
+  const embedUrl = spotifyId ? `https://open.spotify.com/embed/track/${spotifyId}?theme=0` : null
 
   return (
     <div
@@ -51,23 +24,36 @@ export default function NodeActionMenu({
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {/* Hidden audio - play() called directly from click (preserves user gesture) */}
-      {previewUrl && <audio ref={audioRef} src={previewUrl} preload="metadata" />}
-      {/* Top row: Play (primary) | Save (icon) */}
+      {/* Top row: Spotify embed (30s preview) | Save (icon) */}
       <div className="flex items-center gap-2 px-4 py-3">
-        <button
-          onClick={handlePlayClick}
-          disabled={!hasPreview}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${
-            hasPreview
-              ? 'bg-[#1DB954] text-white hover:bg-[#1ed760]'
-              : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
-          }`}
-          title={playTooltip}
-        >
-          <Play className="w-4 h-4 fill-current" />
-          <span>{isFetchingPreview ? 'Loading...' : 'Play'}</span>
-        </button>
+        <div className="flex-1 min-w-0">
+          {embedUrl ? (
+            <iframe
+              src={embedUrl}
+              width="100%"
+              height="80"
+              frameBorder="0"
+              allowFullScreen
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-lg"
+              title="Spotify preview"
+            />
+          ) : isFetchingSpotify ? (
+            <div className="flex items-center justify-center gap-2 h-10 rounded-lg bg-gray-600/50 text-gray-400 text-sm">
+              <Play className="w-4 h-4 fill-current animate-pulse" />
+              <span>Loading preview...</span>
+            </div>
+          ) : spotifyUnavailable ? (
+            <div className="flex items-center justify-center h-10 rounded-lg bg-gray-600/50 text-gray-400 text-xs px-2">
+              No preview on Spotify
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-10 rounded-lg bg-gray-600/50 text-gray-400 text-xs px-2">
+              No preview available
+            </div>
+          )}
+        </div>
         {onSave && (
           <button
             onClick={() => onSave?.()}

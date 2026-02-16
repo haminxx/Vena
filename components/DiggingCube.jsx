@@ -2,7 +2,6 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { useAudioPlayer } from '@/context/AudioPlayerContext'
 import { Html, CameraControls, Billboard, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import { mapTrackToPosition } from '@/utils/mapTrackToPosition'
@@ -71,7 +70,6 @@ function Scene({
   selectedNodeId,
   showCardTrackId,
   onSelectNode,
-  onPlay,
   onExpand,
   onAbout,
   onClose,
@@ -138,15 +136,13 @@ function Scene({
                 >
                   <div className="pointer-events-auto w-[300px]" onPointerDown={(e) => { e.stopPropagation(); onMenuPointerDown?.() }}>
                     <NodeActionMenu
-                      onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
                       onSave={() => addSavedTrack(track, isSaved)}
                       onClose={onClose}
-                      hasPreview={!!track?.previewUrl}
-                      previewUrl={track?.previewUrl ?? null}
-                      isFetchingPreview={previewFetchingFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
-                      previewUnavailable={previewUnavailableFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
+                      spotifyId={track?.spotifyId ?? null}
+                      isFetchingSpotify={previewFetchingFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
+                      spotifyUnavailable={previewUnavailableFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
                       isSaved={isSaved}
                     />
                   </div>
@@ -213,7 +209,6 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     }
     saveTrackToTab(tabId, enriched)
   }, [tabId, saveTrackToTab, removeSavedTrackFromTab])
-  const { play } = useAudioPlayer()
   const setDiggingState = useAppStore((s) => s.setDiggingState)
 
   const [nodes, setNodes] = useState(() => {
@@ -299,7 +294,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     const trackNameVal = track?.title ?? ''
     fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:prefetchEffect',message:'Effect run',data:{selectedNodeId,hasTrack:!!track,hasPreviewUrl:!!track?.previewUrl,artist:artistVal?.slice(0,20),trackName:trackNameVal?.slice(0,20),hasLookup:!!(track?.spotifyId||artistVal||trackNameVal)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
     // #endregion
-    if (!track?.previewUrl) {
+    if (!track?.spotifyId) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
       const hasLookup = track?.spotifyId || artist || trackName
@@ -427,45 +422,6 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     if (isSelecting) onSelectNode?.(track)
   }, [onSelectNode, selectedNodeId])
 
-  const handlePlay = useCallback(async (track) => {
-    // #region agent log
-    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:handlePlay',message:'Play clicked',data:{hasPreviewUrl:!!track?.previewUrl,trackTitle:track?.title?.slice(0,20)},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    let previewUrl = track?.previewUrl
-    if (!previewUrl) {
-      const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
-      const trackName = track?.title ?? ''
-      const hasLookup = track?.spotifyId || artist || trackName
-      if (hasLookup) {
-        try {
-          const params = new URLSearchParams()
-          if (track?.spotifyId) params.set('spotifyId', track.spotifyId)
-          else { params.set('artist', artist); params.set('track', trackName) }
-          const ac = new AbortController()
-          const t = setTimeout(() => ac.abort(), 15000)
-          const res = await fetch(`/api/enrich-track-spotify?${params}`, { signal: ac.signal })
-          clearTimeout(t)
-          const data = await res.json()
-          previewUrl = data?.previewUrl ?? null
-          if (previewUrl || data?.spotifyId) {
-            const key = track?.id ?? track?.videoId ?? track?.spotifyId
-            setNodes((prev) =>
-              prev.map((n) =>
-                (n.id ?? n.videoId ?? n.spotifyId) === key
-                  ? { ...n, previewUrl: previewUrl ?? n.previewUrl, spotifyId: data.spotifyId ?? n.spotifyId }
-                  : n
-              )
-            )
-          }
-        } catch (_) { /* ignore */ }
-      }
-    }
-    // #region agent log
-    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:handlePlayEnd',message:'Before play()',data:{willPlay:!!previewUrl,urlLen:previewUrl?.length},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    if (previewUrl) play(previewUrl)
-  }, [play])
-
   const handleExpand = useCallback(
     (track) => {
       justClickedMenuRef.current = true
@@ -551,7 +507,6 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           selectedNodeId={selectedNodeId}
           showCardTrackId={showCardTrackId}
           onSelectNode={handleSelectNode}
-          onPlay={handlePlay}
           onExpand={handleExpand}
           onAbout={handleAbout}
           onClose={handleClose}
