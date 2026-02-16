@@ -86,6 +86,7 @@ function Scene({
   loadingSimilar,
   onMenuPointerDown,
   previewFetchingFor,
+  previewUnavailableFor,
 }) {
   return (
     <>
@@ -530,6 +531,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           loadingSimilar={loadingSimilar}
           onMenuPointerDown={() => { justClickedMenuRef.current = true }}
           previewFetchingFor={previewFetchingFor}
+          previewUnavailableFor={previewUnavailableFor}
         />
       </Canvas>
 
