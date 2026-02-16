@@ -13,6 +13,7 @@ export default function NodeActionMenu({
   onSave,
   onClose,
   hasPreview = false,
+  isFetchingPreview = false,
   isSaved = false,
 }) {
   return (
@@ -31,10 +32,10 @@ export default function NodeActionMenu({
               ? 'bg-[#1DB954] text-white hover:bg-[#1ed760]'
               : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
           }`}
-          title={hasPreview ? 'Play 30s preview' : 'No preview'}
+          title={hasPreview ? 'Play 30s preview' : isFetchingPreview ? 'Loading preview...' : 'No preview available'}
         >
           <Play className="w-4 h-4 fill-current" />
-          <span>Play</span>
+          <span>{isFetchingPreview ? 'Loading...' : 'Play'}</span>
         </button>
         {onSave && (
           <button

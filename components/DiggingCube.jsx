@@ -84,6 +84,8 @@ function Scene({
   savedTracks,
   addSavedTrack,
   loadingSimilar,
+  onMenuPointerDown,
+  previewFetchingFor,
 }) {
   return (
     <>
@@ -133,17 +135,15 @@ function Scene({
                   pointerEvents="none"
                   style={{ width: 300, pointerEvents: 'auto' }}
                 >
-                  <div className="pointer-events-auto w-[300px]">
+                  <div className="pointer-events-auto w-[300px]" onPointerDown={(e) => { e.stopPropagation(); onMenuPointerDown?.() }}>
                     <NodeActionMenu
                       onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
                       onSave={() => addSavedTrack(track, isSaved)}
                       onClose={onClose}
-                      hasPreview={
-                        !!track?.previewUrl ||
-                        (!!track?.title && !!(typeof track?.artist === 'string' ? track.artist : track?.artist?.name))
-                      }
+                      hasPreview={!!track?.previewUrl}
+                      isFetchingPreview={previewFetchingFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
                       isSaved={isSaved}
                     />
                   </div>
@@ -276,8 +276,13 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
   }, [tabId, nodes, links, setDiggingState])
 
   // Pre-fetch Spotify preview when menu opens so Play works immediately (avoids async/autoplay block)
+  const [previewFetchingFor, setPreviewFetchingFor] = useState(null)
   useEffect(() => {
-    if (!selectedNodeId || !nodes.length) return
+    if (!selectedNodeId) {
+      setPreviewFetchingFor(null)
+      return
+    }
+    if (!nodes.length) return
     const track = nodes.find(
       (n) => (n.id ?? n.videoId ?? n.spotifyId) === selectedNodeId
     )
@@ -285,6 +290,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
       if (artist || trackName) {
+        setPreviewFetchingFor(selectedNodeId)
         const params = new URLSearchParams({ artist, track: trackName })
         fetch(`/api/enrich-track-spotify?${params}`)
           .then((r) => r.json())
@@ -299,7 +305,10 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
             }
           })
           .catch(() => {})
+          .finally(() => setPreviewFetchingFor(null))
       }
+    } else {
+      setPreviewFetchingFor(null)
     }
   }, [selectedNodeId, nodes])
 
@@ -353,13 +362,22 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       console.error('Similar tracks:', err)
     } finally {
       setLoadingSimilar(false)
+      nodesExpandedAtRef.current = Date.now()
     }
   }, [nodes])
 
+  const justClickedMenuRef = useRef(false)
+  const nodesExpandedAtRef = useRef(0)
   const handleSelectNode = useCallback((track) => {
     if (!track) return
-    const isSelecting = selectedNodeId !== track.id
-    setSelectedNodeId((prev) => (prev === track.id ? null : track.id))
+    if (justClickedMenuRef.current) {
+      justClickedMenuRef.current = false
+      return
+    }
+    if (Date.now() - nodesExpandedAtRef.current < 400) return
+    const trackKey = track?.id ?? track?.videoId ?? track?.spotifyId
+    const isSelecting = selectedNodeId !== trackKey
+    setSelectedNodeId((prev) => (prev === trackKey ? null : trackKey))
     setShowCardTrackId(null)
     if (isSelecting) onSelectNode?.(track)
   }, [onSelectNode, selectedNodeId])
@@ -391,6 +409,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
 
   const handleExpand = useCallback(
     (track) => {
+      justClickedMenuRef.current = true
       setSelectedNodeId(null)
       onExpandNode?.(track)
       fetchSimilar(track)
@@ -486,6 +505,8 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           savedTracks={savedTracks}
           addSavedTrack={handleToggleSave}
           loadingSimilar={loadingSimilar}
+          onMenuPointerDown={() => { justClickedMenuRef.current = true }}
+          previewFetchingFor={previewFetchingFor}
         />
       </Canvas>
 
