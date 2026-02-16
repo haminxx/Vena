@@ -141,6 +141,9 @@ function Scene({
                       onSave={() => addSavedTrack(track, isSaved)}
                       onClose={onClose}
                       spotifyId={track?.spotifyId ?? null}
+                      previewUrl={track?.previewUrl ?? null}
+                      title={track?.title ?? ''}
+                      artist={typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''}
                       isFetchingSpotify={previewFetchingFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
                       spotifyUnavailable={previewUnavailableFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
                       isSaved={isSaved}
@@ -294,7 +297,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     const trackNameVal = track?.title ?? ''
     fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:prefetchEffect',message:'Effect run',data:{selectedNodeId,hasTrack:!!track,hasPreviewUrl:!!track?.previewUrl,artist:artistVal?.slice(0,20),trackName:trackNameVal?.slice(0,20),hasLookup:!!(track?.spotifyId||artistVal||trackNameVal)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
     // #endregion
-    if (!track?.spotifyId) {
+    if (!track?.spotifyId || !track?.previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
       const hasLookup = track?.spotifyId || artist || trackName
