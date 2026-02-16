@@ -214,11 +214,6 @@ export default function BrowserLayout() {
               className={`flex items-center gap-1.5 px-4 py-2 rounded-t-lg -mb-px border border-b-0 transition-none z-0 ${
                 isActive ? `${chromeTabActive} shadow-sm z-10` : chromeTabInactive
               }`}
-              style={
-                isActive
-                  ? { clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%)' }
-                  : undefined
-              }
             >
               <span className="text-sm font-medium truncate max-w-[140px]">{tabLabel}</span>
               <span
