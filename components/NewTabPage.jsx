@@ -28,13 +28,13 @@ const APP_CARDS = [
 
 export default function NewTabPage({ onSelectCard, dark = false }) {
   return (
-    <div className={`flex-1 flex flex-col items-center justify-center p-8 min-h-[400px] ${
+    <div className={`flex-1 flex flex-col items-center justify-center p-4 sm:p-8 min-h-[400px] ${
       dark ? 'bg-gradient-to-b from-gray-900 to-gray-950' : 'bg-gradient-to-b from-gray-50 to-white'
     }`}>
       <h1 className={`text-2xl font-light mb-2 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>DigBrowser</h1>
       <p className={`text-sm mb-12 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>Choose an app to get started</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-2xl w-full px-2">
         {APP_CARDS.map((card) => {
           const Icon = card.icon
           const isPlaceholder = card.id === 'future'

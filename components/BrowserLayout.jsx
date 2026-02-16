@@ -201,9 +201,9 @@ export default function BrowserLayout() {
   const inputBg = isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'
 
   return (
-    <div className={`min-h-screen flex flex-col rounded-t-xl overflow-hidden shadow-lg ${chromeBg}`}>
+    <div className={`w-full max-w-full min-h-screen flex flex-col rounded-none sm:rounded-t-xl overflow-hidden shadow-lg ${chromeBg}`}>
       {/* Tab Bar */}
-      <div className={`flex items-end px-2 pt-2 gap-0.5 ${chromeBg}`}>
+      <div className={`flex items-end px-1 sm:px-2 pt-2 gap-0.5 overflow-x-auto min-w-0 ${chromeBg}`}>
         {tabs.map((tab) => {
           const isActive = activeTabId === tab.id
           const tabLabel = tab.title || (TAB_LABELS[tab.type] ?? tab.type)
@@ -215,7 +215,7 @@ export default function BrowserLayout() {
                 isActive ? `${chromeTabActive} shadow-sm z-10` : chromeTabInactive
               }`}
             >
-              <span className="text-sm font-medium truncate max-w-[140px]">{tabLabel}</span>
+              <span className="text-sm font-medium truncate max-w-[100px] sm:max-w-[140px]">{tabLabel}</span>
               <span
                 onClick={(e) => {
                   e.stopPropagation()
@@ -239,7 +239,7 @@ export default function BrowserLayout() {
       </div>
 
       {/* Toolbar: Back / Forward / Refresh / Omnibox / Theme */}
-      <div className={`flex items-center gap-2 px-4 py-2 border-b ${toolbarBg}`}>
+      <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 border-b overflow-x-auto ${toolbarBg}`}>
         <div className="flex items-center gap-0.5">
           <button
             onClick={handleBack}
@@ -294,11 +294,11 @@ export default function BrowserLayout() {
           )}
         </div>
 
-        {/* Domain Bar: Breadcrumb or Omnibox */}
+        {/* Domain Bar: Breadcrumb (hidden on phone) or Omnibox */}
         <div className="flex-1 relative flex items-center min-w-0">
-          {showBreadcrumb ? (
+          {showBreadcrumb && (
             <div
-              className={`flex items-center gap-1 flex-wrap py-2 px-3 rounded-full border ${inputBg} min-w-0 overflow-hidden`}
+              className={`hidden sm:flex items-center gap-1 flex-wrap py-2 px-3 rounded-full border flex-1 min-w-0 overflow-hidden ${inputBg}`}
               style={{ maxWidth: '100%' }}
             >
               {breadcrumbItems.map((item, i) => (
@@ -317,32 +317,31 @@ export default function BrowserLayout() {
                 </span>
               ))}
             </div>
-          ) : (
-            <form
-              className={`flex items-center gap-2 rounded-full pl-4 pr-3 py-2 border transition-colors flex-1 min-w-0 ${inputBg} focus-within:ring-2 focus-within:ring-blue-500`}
-              onSubmit={(e) => {
-                e.preventDefault()
-                performSearch(searchInput, false)
-                setShowSuggestions(false)
-              }}
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchInput}
-                onChange={(e) => {
-                  setSearchInput(e.target.value)
-                  setShowSuggestions(true)
-                }}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                placeholder="Search for a track..."
-                className={`flex-1 bg-transparent border-none outline-none text-sm min-w-0 ${isDark ? 'text-gray-200 placeholder-gray-500' : 'text-gray-800 placeholder-gray-400'}`}
-                disabled={loading}
-              />
-            </form>
           )}
+          <form
+            className={`flex items-center gap-2 rounded-full pl-4 pr-3 py-2 border transition-colors flex-1 min-w-0 ${inputBg} focus-within:ring-2 focus-within:ring-blue-500 ${showBreadcrumb ? 'sm:hidden' : ''}`}
+            onSubmit={(e) => {
+              e.preventDefault()
+              performSearch(searchInput, false)
+              setShowSuggestions(false)
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value)
+                setShowSuggestions(true)
+              }}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              placeholder="Search for a track..."
+              className={`flex-1 bg-transparent border-none outline-none text-sm min-w-0 ${isDark ? 'text-gray-200 placeholder-gray-500' : 'text-gray-800 placeholder-gray-400'}`}
+              disabled={loading}
+            />
+          </form>
 
-          {!showBreadcrumb && showSuggestions && suggestions.length > 0 && (
+          {showSuggestions && suggestions.length > 0 && (
             <div
               ref={suggestionsRef}
               className={`absolute top-full left-0 right-0 mt-1 rounded-lg shadow-lg border overflow-hidden z-50 ${
@@ -399,6 +398,7 @@ export default function BrowserLayout() {
               dark={isDark}
               initialQuery={currentState?.query}
               initialGraphData={currentState?.graphData}
+              onBackToHome={handleHome}
               onSelectTrack={(track) => {
                 if (track) {
                   const state = {

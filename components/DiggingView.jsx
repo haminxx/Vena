@@ -70,6 +70,7 @@ function metadataToTrack(meta) {
 export default function DiggingView({
   onSelectTrack,
   onExpandNode,
+  onBackToHome,
   dark = false,
   initialQuery = '',
   initialGraphData = null,
@@ -176,10 +177,10 @@ export default function DiggingView({
           persistedNodes={persisted?.nodes}
           persistedLinks={persisted?.links}
           focusNodeId={persisted?.focusNodeId}
-          onBack={() => {
+          onBack={onBackToHome ?? (() => {
             setSelectedTrack(null)
             useAppStore.getState().clearDiggingState(activeTabId)
-          }}
+          })}
           onExpandNode={onExpandNode}
           onSelectNode={(track) => {
             useAppStore.getState().updateTabTitle(activeTabId, [track?.title, typeof track?.artist === 'string' ? track.artist : track?.artist?.name].filter(Boolean).join(' - ') || track?.title || 'Untitled')
@@ -190,11 +191,11 @@ export default function DiggingView({
   }
 
   return (
-    <div className={`flex-1 flex flex-col items-center justify-center p-8 ${dark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <div className={`flex-1 flex flex-col items-center justify-center p-4 sm:p-8 ${dark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <h2 className={`text-2xl font-light mb-2 ${textClass}`}>Discover Music</h2>
       <p className={`text-sm mb-8 ${mutedClass}`}>Search by track, artist, or mood (e.g. &quot;Sad Piano&quot;)</p>
 
-      <div className="w-full max-w-xl">
+      <div className="w-full max-w-xl px-4 sm:px-0">
         <OmniSearch
           value={searchInput}
           onChange={setSearchInput}
@@ -210,7 +211,7 @@ export default function DiggingView({
       {error && <p className="mt-4 text-red-500 text-sm">{error}</p>}
       {loading && <p className={`mt-4 ${mutedClass}`}>Searching...</p>}
 
-      <div className="mt-16 w-full max-w-xl">
+      <div className="mt-16 w-full max-w-xl px-4 sm:px-0">
         <h3 className={`flex items-center gap-2 text-sm font-medium ${mutedClass} mb-4`}>
           <TrendingUp className="w-4 h-4" />
           Recent

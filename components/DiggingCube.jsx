@@ -470,9 +470,9 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       {onBack && (
         <button
           onClick={onBack}
-          className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/90 hover:bg-white text-gray-700 shadow-md border border-gray-200"
+          className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/90 hover:bg-white text-gray-700 shadow-md border border-gray-200 touch-manipulation text-sm sm:text-base"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 shrink-0" />
           Back to Search
         </button>
       )}
