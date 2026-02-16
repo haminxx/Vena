@@ -59,37 +59,9 @@ export default function ArtistCard({ track, onClose }) {
         throw new Error('No Spotify data')
       })
       .catch(() => {
-        // Fallback to YouTube Music when Spotify has no match
-        const params = new URLSearchParams()
-        if (track?.videoId) params.set('videoId', track.videoId)
-        if (artist) params.set('artist', artist)
-        if (trackTitle) params.set('track', trackTitle)
-        if (params.toString()) {
-          return fetch(`/api/artist-youtube?${params}`)
-            .then((r) => r.json())
-            .then((yt) => ({
-              popularTracks: (yt.popularTracks ?? []).map((r) => ({
-                id: r.videoId ?? r.id,
-                videoId: r.videoId ?? r.id,
-                name: r.name ?? r.title,
-                artist: r.artist,
-              })),
-              imageLarge: yt.imageLarge ?? yt.image,
-              artistName: yt.artistName ?? artist,
-              artistId: null,
-              genres: Array.isArray(yt.genres) ? yt.genres : [],
-            }))
-            .then((yt) => {
-              setPopularTracks(yt.popularTracks)
-              setArtistImageLarge(yt.imageLarge ?? null)
-              setArtistNameFromApi(yt.artistName ?? '')
-              setSpotifyArtistId(null)
-              setGenres(yt.genres)
-            })
-        }
         setPopularTracks([])
-        setArtistImageLarge(null)
-        setArtistNameFromApi('')
+        setArtistImageLarge(track?.artistImage ?? track?.artistImageLarge ?? null)
+        setArtistNameFromApi(artist || (typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''))
         setSpotifyArtistId(null)
         setGenres([])
       })
@@ -98,7 +70,7 @@ export default function ArtistCard({ track, onClose }) {
 
   const getItemKey = (item, i) => item?.id ?? item?.videoId ?? `${item?.name ?? item?.title ?? ''}-${i}`
 
-  const displayTracks = popularTracks.length > 0 ? popularTracks : (track?.topTracks ?? []).slice(0, 8)
+  const displayTracks = popularTracks
 
   const spotifyUrl = spotifyArtistId ? `https://open.spotify.com/artist/${spotifyArtistId}` : null
   const youtubeMusicUrl = artistName

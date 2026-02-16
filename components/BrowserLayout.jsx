@@ -292,40 +292,20 @@ export default function BrowserLayout() {
           )}
         </div>
 
-        {/* Domain Bar: Breadcrumb (full on desktop), latest song on phone, or Omnibox */}
+        {/* Domain Bar: Single long bar showing path of expanded songs (ellipsis when overflow), or search input */}
         <div className="flex-1 relative flex items-center min-w-0 overflow-hidden">
-          {showBreadcrumb && (
-            <>
+          {showBreadcrumb ? (
+            <div
+              className={`flex items-center py-2 px-3 sm:px-4 rounded-full border flex-1 min-w-0 overflow-hidden ${inputBg}`}
+            >
               <div
-                className={`hidden sm:flex items-center gap-1 flex-wrap py-2 px-3 rounded-full border flex-1 min-w-0 overflow-hidden ${inputBg}`}
-                style={{ maxWidth: '100%' }}
+                className={`text-sm truncate min-w-0 flex-1 cursor-default ${isDark ? 'text-gray-200' : 'text-gray-800'}`}
+                title={breadcrumbItems.map((x) => x.label).join(' › ')}
               >
-                {breadcrumbItems.map((item, i) => (
-                  <span key={item.isHome ? 'home' : item.index} className="flex items-center gap-1 shrink-0">
-                    {i > 0 && (
-                      <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>&gt;</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleBreadcrumbClick(item)}
-                      className={`text-sm truncate max-w-[140px] hover:underline ${isDark ? 'text-gray-200 hover:text-white' : 'text-gray-800 hover:text-gray-900'}`}
-                      title={item.label}
-                    >
-                      {item.label}
-                    </button>
-                  </span>
-                ))}
+                {breadcrumbItems.map((x) => x.label).join(' › ')}
               </div>
-              <div
-                className={`sm:hidden flex items-center py-2 px-3 rounded-full border flex-1 min-w-0 overflow-hidden truncate ${inputBg}`}
-                title={pathItems[pathItems.length - 1]?.label}
-              >
-                <span className={`text-sm truncate ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                  {pathItems[pathItems.length - 1]?.label ?? 'Track'}
-                </span>
-              </div>
-            </>
-          )}
+            </div>
+          ) : null}
           <form
             className={`flex items-center gap-2 rounded-full pl-3 sm:pl-4 pr-2 sm:pr-3 py-2 border transition-colors flex-1 min-w-0 overflow-hidden ${inputBg} focus-within:ring-2 focus-within:ring-blue-500 ${showBreadcrumb ? 'hidden' : ''}`}
             onSubmit={(e) => {
