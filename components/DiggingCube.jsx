@@ -111,6 +111,7 @@ function Scene({
         const trackKey = track?.id ?? track?.videoId ?? track?.spotifyId
         const isMenuOpen = selectedNodeId === track.id || selectedNodeId === track?.videoId || selectedNodeId === track?.spotifyId
         const isCardOpen = showCardTrackId === trackKey
+        const isSaved = savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))
         return (
           <group key={trackKey ?? track.id ?? 'node'} position={pos}>
             <DiggingNode
@@ -137,13 +138,13 @@ function Scene({
                       onPlay={() => onPlay(track)}
                       onExpand={() => onExpand(track)}
                       onAbout={() => onAbout(track)}
-                      onSave={() => addSavedTrack(track)}
+                      onSave={() => addSavedTrack(track, isSaved)}
                       onClose={onClose}
                       hasPreview={
                         !!track?.previewUrl ||
                         (!!track?.title && !!(typeof track?.artist === 'string' ? track.artist : track?.artist?.name))
                       }
-                      isSaved={savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))}
+                      isSaved={isSaved}
                     />
                   </div>
                 </Html>
@@ -182,9 +183,14 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     return t?.data?.savedTracks ?? EMPTY_ARRAY
   })
   const saveTrackToTab = useAppStore((s) => s.saveTrackToTab)
+  const removeSavedTrackFromTab = useAppStore((s) => s.removeSavedTrackFromTab)
   const { setHoverTrack, setAlbumColorFromImage } = useMoodBackground()
 
-  const handleSaveTrack = useCallback(async (track) => {
+  const handleToggleSave = useCallback(async (track, isSaved) => {
+    if (isSaved) {
+      removeSavedTrackFromTab(tabId, track?.id ?? track?.spotifyId ?? track?.videoId)
+      return
+    }
     let enriched = { ...track }
     if (!enriched.spotifyId || !enriched.previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
@@ -200,7 +206,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
       }
     }
     saveTrackToTab(tabId, enriched)
-  }, [tabId, saveTrackToTab])
+  }, [tabId, saveTrackToTab, removeSavedTrackFromTab])
   const { play } = useAudioPlayer()
   const setDiggingState = useAppStore((s) => s.setDiggingState)
 
@@ -478,7 +484,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           activeNodeId={activeNodeId}
           lastTriggerTime={lastTriggerTime}
           savedTracks={savedTracks}
-          addSavedTrack={handleSaveTrack}
+          addSavedTrack={handleToggleSave}
           loadingSimilar={loadingSimilar}
         />
       </Canvas>

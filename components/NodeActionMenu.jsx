@@ -42,7 +42,7 @@ export default function NodeActionMenu({
             className={`flex items-center justify-center p-2.5 rounded-lg transition-colors ${
               isSaved ? 'bg-green-500/30 text-green-300' : 'bg-white/10 text-white hover:bg-white/20'
             }`}
-            title={isSaved ? 'Saved' : 'Save for Sync'}
+            title={isSaved ? 'Unsave' : 'Save for Sync'}
           >
             <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
           </button>
