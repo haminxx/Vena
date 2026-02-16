@@ -67,8 +67,10 @@ export default function Home() {
   }
 
   return (
-    <ClientProviders>
-      <BrowserLayout />
-    </ClientProviders>
+    <div className="h-dvh max-h-dvh overflow-hidden w-full max-w-full">
+      <ClientProviders>
+        <BrowserLayout />
+      </ClientProviders>
+    </div>
   )
 }

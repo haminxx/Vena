@@ -201,9 +201,9 @@ export default function BrowserLayout() {
   const inputBg = isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'
 
   return (
-    <div className={`w-full max-w-full min-h-screen flex flex-col rounded-none sm:rounded-t-xl overflow-hidden shadow-lg ${chromeBg}`}>
+    <div className={`w-full max-w-full h-dvh min-h-0 flex flex-col rounded-none sm:rounded-t-xl overflow-hidden shadow-lg ${chromeBg}`}>
       {/* Tab Bar */}
-      <div className={`flex items-end px-1 sm:px-2 pt-2 gap-0.5 overflow-x-auto min-w-0 ${chromeBg}`}>
+      <div className={`flex items-end flex-wrap px-1 sm:px-2 pt-2 gap-0.5 min-w-0 overflow-hidden ${chromeBg}`}>
         {tabs.map((tab) => {
           const isActive = activeTabId === tab.id
           const tabLabel = tab.title || (TAB_LABELS[tab.type] ?? tab.type)
@@ -211,7 +211,7 @@ export default function BrowserLayout() {
             <button
               key={tab.id}
               onClick={() => setActiveTabId(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-t-lg -mb-px border border-b-0 transition-none z-0 ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-t-lg -mb-px border border-b-0 transition-none z-0 shrink-0 ${
                 isActive ? `${chromeTabActive} shadow-sm z-10` : chromeTabInactive
               }`}
             >
@@ -231,7 +231,7 @@ export default function BrowserLayout() {
         })}
         <button
           onClick={addTab}
-          className="p-2 rounded-lg -mb-px hover:bg-gray-600/30 transition-colors text-gray-500 hover:text-gray-700"
+          className="p-1.5 sm:p-2 rounded-lg -mb-px hover:bg-gray-600/30 transition-colors text-gray-500 hover:text-gray-700 shrink-0"
           aria-label="New tab"
         >
           <Plus className="w-5 h-5" />
@@ -239,7 +239,7 @@ export default function BrowserLayout() {
       </div>
 
       {/* Toolbar: Back / Forward / Refresh / Omnibox / Theme */}
-      <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 border-b overflow-x-auto ${toolbarBg}`}>
+      <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 border-b min-w-0 overflow-hidden ${toolbarBg}`}>
         <div className="flex items-center gap-0.5">
           <button
             onClick={handleBack}
@@ -294,32 +294,42 @@ export default function BrowserLayout() {
           )}
         </div>
 
-        {/* Domain Bar: Breadcrumb (hidden on phone) or Omnibox */}
-        <div className="flex-1 relative flex items-center min-w-0">
+        {/* Domain Bar: Breadcrumb (full on desktop), latest song on phone, or Omnibox */}
+        <div className="flex-1 relative flex items-center min-w-0 overflow-hidden">
           {showBreadcrumb && (
-            <div
-              className={`hidden sm:flex items-center gap-1 flex-wrap py-2 px-3 rounded-full border flex-1 min-w-0 overflow-hidden ${inputBg}`}
-              style={{ maxWidth: '100%' }}
-            >
-              {breadcrumbItems.map((item, i) => (
-                <span key={item.isHome ? 'home' : item.index} className="flex items-center gap-1 shrink-0">
-                  {i > 0 && (
-                    <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>&gt;</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleBreadcrumbClick(item)}
-                    className={`text-sm truncate max-w-[140px] hover:underline ${isDark ? 'text-gray-200 hover:text-white' : 'text-gray-800 hover:text-gray-900'}`}
-                    title={item.label}
-                  >
-                    {item.label}
-                  </button>
+            <>
+              <div
+                className={`hidden sm:flex items-center gap-1 flex-wrap py-2 px-3 rounded-full border flex-1 min-w-0 overflow-hidden ${inputBg}`}
+                style={{ maxWidth: '100%' }}
+              >
+                {breadcrumbItems.map((item, i) => (
+                  <span key={item.isHome ? 'home' : item.index} className="flex items-center gap-1 shrink-0">
+                    {i > 0 && (
+                      <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>&gt;</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleBreadcrumbClick(item)}
+                      className={`text-sm truncate max-w-[140px] hover:underline ${isDark ? 'text-gray-200 hover:text-white' : 'text-gray-800 hover:text-gray-900'}`}
+                      title={item.label}
+                    >
+                      {item.label}
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div
+                className={`sm:hidden flex items-center py-2 px-3 rounded-full border flex-1 min-w-0 overflow-hidden truncate ${inputBg}`}
+                title={pathItems[pathItems.length - 1]?.label}
+              >
+                <span className={`text-sm truncate ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  {pathItems[pathItems.length - 1]?.label ?? 'Track'}
                 </span>
-              ))}
-            </div>
+              </div>
+            </>
           )}
           <form
-            className={`flex items-center gap-2 rounded-full pl-4 pr-3 py-2 border transition-colors flex-1 min-w-0 ${inputBg} focus-within:ring-2 focus-within:ring-blue-500 ${showBreadcrumb ? 'sm:hidden' : ''}`}
+            className={`flex items-center gap-2 rounded-full pl-3 sm:pl-4 pr-2 sm:pr-3 py-2 border transition-colors flex-1 min-w-0 overflow-hidden ${inputBg} focus-within:ring-2 focus-within:ring-blue-500 ${showBreadcrumb ? 'hidden' : ''}`}
             onSubmit={(e) => {
               e.preventDefault()
               performSearch(searchInput, false)
@@ -385,7 +395,7 @@ export default function BrowserLayout() {
       </div>
 
       {/* Content Area */}
-      <div className={`flex-1 min-h-[400px] flex flex-col overflow-hidden ${contentBg}`}>
+      <div className={`flex-1 min-h-0 flex flex-col overflow-hidden ${contentBg}`}>
         {activeTab?.type === 'new-tab' && (
           <NewTabPage
             onSelectCard={(type) => setTabType(activeTabId, type)}
