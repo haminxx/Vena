@@ -142,6 +142,7 @@ function Scene({
                       onClose={onClose}
                       spotifyId={track?.spotifyId ?? null}
                       previewUrl={track?.previewUrl ?? null}
+                      videoId={track?.videoId ?? null}
                       title={track?.title ?? ''}
                       artist={typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''}
                       isFetchingSpotify={previewFetchingFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}

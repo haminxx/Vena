@@ -31,6 +31,29 @@ export async function POST(request) {
       return ''
     }
 
+    const normalize = (s) =>
+      (s || '')
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+    const matchesYouTube = (ytTitle, ytArtist, spName, spArtist) => {
+      const nyt = normalize(ytTitle)
+      const nsp = normalize(spName)
+      const ayt = normalize(ytArtist)
+      const asp = normalize(spArtist)
+      if (!nyt || !nsp) return false
+      const titleWords = nyt.split(' ').filter((w) => w.length > 1)
+      const titleMatch =
+        nyt === nsp ||
+        nyt.includes(nsp) ||
+        nsp.includes(nyt) ||
+        (titleWords.length > 0 && titleWords.every((w) => nsp.includes(w)))
+      const artistMatch = !ayt || !asp || ayt === asp || ayt.includes(asp) || asp.includes(ayt)
+      return titleMatch && artistMatch
+    }
+
     let title, artist, videoId, spotifyTrack, ytResults, access_token
 
     if (inputSpotifyId && typeof inputSpotifyId === 'string') {
@@ -119,7 +142,21 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Spotify search failed' }, { status: 502 })
       }
       const spotifySearch = await spotifySearchRes.json()
-      spotifyTrack = spotifySearch.tracks?.items?.[0] ?? null
+      const items = spotifySearch.tracks?.items ?? []
+      const best = items.find(
+        (t) =>
+          matchesYouTube(
+            title,
+            artist,
+            t?.name ?? '',
+            t?.artists?.[0]?.name ?? ''
+          )
+      ) ?? items[0]
+      if (best && matchesYouTube(title, artist, best?.name ?? '', best?.artists?.[0]?.name ?? '')) {
+        spotifyTrack = best
+      } else {
+        spotifyTrack = null
+      }
     }
 
     if (!spotifyTrack) {

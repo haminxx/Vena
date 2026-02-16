@@ -4,10 +4,12 @@ import { useState, useRef, useEffect } from 'react'
 import { Play, Pause, Bookmark, Network, Info } from 'lucide-react'
 
 const SPOTIFY_EMBED_SCRIPT = 'https://open.spotify.com/embed/iframe-api/v1'
+const YOUTUBE_IFRAME_API = 'https://www.youtube.com/iframe_api'
 
 /**
  * Custom preview player: Play button, song/artist, interactive progress bar.
- * Uses previewUrl (HTML5 Audio) when available, else Spotify iframe API with spotifyId.
+ * Uses previewUrl (HTML5 Audio) when available, else Spotify iframe API with spotifyId,
+ * else YouTube IFrame API with videoId when Spotify match is poor.
  */
 export default function NodeActionMenu({
   onExpand,
@@ -16,6 +18,7 @@ export default function NodeActionMenu({
   onClose,
   spotifyId = null,
   previewUrl = null,
+  videoId = null,
   title = '',
   artist = '',
   isFetchingSpotify = false,
@@ -25,16 +28,18 @@ export default function NodeActionMenu({
   const [isPlaying, setIsPlaying] = useState(false)
   const [position, setPosition] = useState(0)
   const [duration, setDuration] = useState(30)
-  const [useAudio, setUseAudio] = useState(false)
+  const [playbackMode, setPlaybackMode] = useState('none') // 'audio' | 'spotify' | 'youtube'
   const audioRef = useRef(null)
   const embedRef = useRef(null)
   const controllerRef = useRef(null)
-  const hasPlayback = !!(previewUrl || spotifyId)
+  const youtubeRef = useRef(null)
+  const youtubePlayerRef = useRef(null)
+  const hasPlayback = !!(previewUrl || spotifyId || videoId)
 
   // HTML5 Audio mode (previewUrl)
   useEffect(() => {
     if (!previewUrl) return
-    setUseAudio(true)
+    setPlaybackMode('audio')
     const audio = new Audio(previewUrl)
     audioRef.current = audio
 
@@ -68,7 +73,7 @@ export default function NodeActionMenu({
   // Spotify iframe API mode (spotifyId only, when previewUrl unavailable)
   useEffect(() => {
     if (!spotifyId || previewUrl) return
-    setUseAudio(false)
+    setPlaybackMode('spotify')
     setDuration(30)
 
     const initEmbed = (IFrameAPI) => {
@@ -113,15 +118,91 @@ export default function NodeActionMenu({
     }
   }, [spotifyId, previewUrl])
 
+  // YouTube IFrame API mode (videoId when no Spotify match)
+  useEffect(() => {
+    if (!videoId || previewUrl || spotifyId) return
+    setPlaybackMode('youtube')
+    setDuration(30)
+
+    const initYouTube = () => {
+      if (!window.YT?.Player || !youtubeRef.current) return
+      const player = new window.YT.Player(youtubeRef.current, {
+        videoId,
+        width: 80,
+        height: 80,
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+        },
+        events: {
+          onReady: (e) => {
+            youtubePlayerRef.current = e.target
+            const d = e.target.getDuration?.()
+            if (d && d > 0) setDuration(d)
+          },
+          onStateChange: (e) => {
+            if (e.data === window.YT.PlayerState.PLAYING) setIsPlaying(true)
+            else if (e.data === window.YT.PlayerState.PAUSED || e.data === window.YT.PlayerState.ENDED) setIsPlaying(false)
+            if (e.data === window.YT.PlayerState.ENDED) setPosition(0)
+          },
+        },
+      })
+    }
+
+    const loadYouTubeAPI = () => {
+      if (window.YT?.Player) {
+        initYouTube()
+        return
+      }
+      window.onYouTubeIframeAPIReady = () => {
+        initYouTube()
+      }
+      if (!document.querySelector(`script[src="${YOUTUBE_IFRAME_API}"]`)) {
+        const script = document.createElement('script')
+        script.src = YOUTUBE_IFRAME_API
+        script.async = true
+        document.body.appendChild(script)
+      }
+    }
+    loadYouTubeAPI()
+
+    const interval = setInterval(() => {
+      const p = youtubePlayerRef.current
+      if (p?.getCurrentTime) {
+        const pos = p.getCurrentTime()
+        if (pos >= 0) setPosition(pos)
+        const d = p.getDuration?.()
+        if (d && d > 0) setDuration(d)
+      }
+    }, 500)
+
+    return () => {
+      clearInterval(interval)
+      if (youtubePlayerRef.current?.destroy) youtubePlayerRef.current.destroy()
+      youtubePlayerRef.current = null
+    }
+  }, [videoId, previewUrl, spotifyId])
+
   const handlePlayPause = () => {
-    if (useAudio && audioRef.current) {
+    if (playbackMode === 'audio' && audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause()
       } else {
         audioRef.current.play().catch(() => {})
       }
-    } else if (controllerRef.current) {
+    } else if (playbackMode === 'spotify' && controllerRef.current) {
       controllerRef.current.togglePlay()
+    } else if (playbackMode === 'youtube' && youtubePlayerRef.current) {
+      if (isPlaying) {
+        youtubePlayerRef.current.pauseVideo()
+      } else {
+        youtubePlayerRef.current.playVideo()
+      }
     }
   }
 
@@ -131,11 +212,14 @@ export default function NodeActionMenu({
     const pct = Math.max(0, Math.min(1, x / rect.width))
     const sec = pct * duration
 
-    if (useAudio && audioRef.current) {
+    if (playbackMode === 'audio' && audioRef.current) {
       audioRef.current.currentTime = sec
       setPosition(sec)
-    } else if (controllerRef.current) {
+    } else if (playbackMode === 'spotify' && controllerRef.current) {
       controllerRef.current.seek(Math.floor(sec))
+    } else if (playbackMode === 'youtube' && youtubePlayerRef.current?.seekTo) {
+      youtubePlayerRef.current.seekTo(sec, true)
+      setPosition(sec)
     }
   }
 
@@ -226,6 +310,12 @@ export default function NodeActionMenu({
       {spotifyId && !previewUrl && (
         <div className="relative overflow-hidden" style={{ width: 0, height: 0 }}>
           <div ref={embedRef} style={{ position: 'absolute', left: -9999, width: 80, height: 80 }} />
+        </div>
+      )}
+      {/* Hidden embed for YouTube (videoId when no Spotify match) - off-screen for playback */}
+      {videoId && !previewUrl && !spotifyId && (
+        <div className="relative overflow-hidden" style={{ width: 0, height: 0 }}>
+          <div ref={youtubeRef} style={{ position: 'absolute', left: -9999, width: 80, height: 80 }} />
         </div>
       )}
 
