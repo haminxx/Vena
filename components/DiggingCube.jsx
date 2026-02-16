@@ -195,9 +195,12 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     if (!enriched.spotifyId || !enriched.previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
-      if (artist || trackName) {
+      const hasLookup = track?.spotifyId || artist || trackName
+      if (hasLookup) {
         try {
-          const params = new URLSearchParams({ artist, track: trackName })
+          const params = new URLSearchParams()
+          if (track?.spotifyId) params.set('spotifyId', track.spotifyId)
+          else { params.set('artist', artist); params.set('track', trackName) }
           const res = await fetch(`/api/enrich-track-spotify?${params}`)
           const data = await res.json()
           if (data?.spotifyId) enriched = { ...enriched, spotifyId: data.spotifyId }
@@ -289,17 +292,22 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     if (!track?.previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
-      if (artist || trackName) {
+      const hasLookup = track?.spotifyId || artist || trackName
+      if (hasLookup) {
+        const trackKey = track?.id ?? track?.videoId ?? track?.spotifyId
         setPreviewFetchingFor(selectedNodeId)
-        const params = new URLSearchParams({ artist, track: trackName })
+        const params = new URLSearchParams()
+        if (track?.spotifyId) params.set('spotifyId', track.spotifyId)
+        else { params.set('artist', artist); params.set('track', trackName) }
         fetch(`/api/enrich-track-spotify?${params}`)
           .then((r) => r.json())
           .then((data) => {
-            if (data?.previewUrl) {
-              const key = track?.id ?? track?.videoId ?? track?.spotifyId
+            if (data?.previewUrl || data?.spotifyId) {
               setNodes((prev) =>
                 prev.map((n) =>
-                  (n.id ?? n.videoId ?? n.spotifyId) === key ? { ...n, previewUrl: data.previewUrl } : n
+                  (n.id ?? n.videoId ?? n.spotifyId) === trackKey
+                    ? { ...n, previewUrl: data.previewUrl ?? n.previewUrl, spotifyId: data.spotifyId ?? n.spotifyId }
+                    : n
                 )
               )
             }
@@ -387,17 +395,22 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     if (!previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
-      if (artist || trackName) {
+      const hasLookup = track?.spotifyId || artist || trackName
+      if (hasLookup) {
         try {
-          const params = new URLSearchParams({ artist, track: trackName })
+          const params = new URLSearchParams()
+          if (track?.spotifyId) params.set('spotifyId', track.spotifyId)
+          else { params.set('artist', artist); params.set('track', trackName) }
           const res = await fetch(`/api/enrich-track-spotify?${params}`)
           const data = await res.json()
           previewUrl = data?.previewUrl ?? null
-          if (previewUrl) {
+          if (previewUrl || data?.spotifyId) {
             const key = track?.id ?? track?.videoId ?? track?.spotifyId
             setNodes((prev) =>
               prev.map((n) =>
-                (n.id ?? n.videoId ?? n.spotifyId) === key ? { ...n, previewUrl } : n
+                (n.id ?? n.videoId ?? n.spotifyId) === key
+                  ? { ...n, previewUrl: previewUrl ?? n.previewUrl, spotifyId: data.spotifyId ?? n.spotifyId }
+                  : n
               )
             )
           }
