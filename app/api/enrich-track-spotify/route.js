@@ -1,4 +1,12 @@
 import { NextResponse } from 'next/server'
+import { appendFileSync } from 'fs'
+import { join } from 'path'
+
+function dbg(payload) {
+  try {
+    appendFileSync(join(process.cwd(), 'DEBUG_PREVIEW.log'), JSON.stringify(payload) + '\n', 'utf8')
+  } catch (_) {}
+}
 
 /**
  * GET /api/enrich-track-spotify?spotifyId=... OR ?artist=...&track=...
@@ -11,6 +19,12 @@ export async function GET(request) {
     const spotifyIdParam = searchParams.get('spotifyId')?.trim()
     const artist = searchParams.get('artist')?.trim()
     const track = searchParams.get('track')?.trim()
+
+    // #region agent log
+    const entryData = {hasSpotifyId:!!spotifyIdParam,hasArtist:!!artist,hasTrack:!!track,hasCreds:!!(process.env.SPOTIFY_CLIENT_ID&&process.env.SPOTIFY_CLIENT_SECRET)};
+    dbg({location:'enrich-track-spotify:entry',message:'API called',data:entryData,hypothesisId:'H1',timestamp:Date.now()});
+    console.log('[DEBUG-PREVIEW] API entry:', JSON.stringify(entryData));
+    // #endregion
 
     if (!spotifyIdParam && !artist && !track) {
       return NextResponse.json(
@@ -60,7 +74,11 @@ export async function GET(request) {
         )
       }
       const t = await trackRes.json()
-      const previewUrl = typeof t?.preview_url === 'string' && t.preview_url.length > 0 ? t.preview_url : null
+      const raw = t?.preview_url
+      const previewUrl = raw && String(raw).trim().length > 0 ? String(raw).trim() : null
+      // #region agent log
+      dbg({location:'enrich-track-spotify:directFetch',message:'Direct fetch by spotifyId',data:{previewUrlFound:!!previewUrl},hypothesisId:'H1',timestamp:Date.now()});
+      // #endregion
       return NextResponse.json(
         { spotifyId: t?.id ?? null, previewUrl },
         { headers: { 'X-Debug-Preview': previewUrl ? 'found' : 'missing' } }
@@ -82,15 +100,22 @@ export async function GET(request) {
 
     const data = await searchRes.json()
     const items = data.tracks?.items ?? []
-    // Strict: only use items with valid preview_url (exact match first, then Remix/Deluxe/Compilation)
-    const withPreview = items.find((item) => item?.preview_url && typeof item.preview_url === 'string' && item.preview_url.length > 0)
+    // Prefer first item with non-empty preview_url; fallback to first result
+    const withPreview = items.find((item) => item?.preview_url && String(item.preview_url).trim().length > 0)
     const first = withPreview ?? items[0]
     const spotifyId = first?.id ?? null
-    const previewUrl = first?.preview_url && typeof first.preview_url === 'string' && first.preview_url.length > 0 ? first.preview_url : null
+    const rawPreview = first?.preview_url
+    const previewUrl = rawPreview && String(rawPreview).trim().length > 0 ? String(rawPreview).trim() : null
+
+    // #region agent log
+    const exitData = {previewUrlFound:!!previewUrl,spotifyId:!!spotifyId,previewUrlLen:previewUrl?.length};
+    dbg({location:'enrich-track-spotify:exit',message:'API returning',data:exitData,hypothesisId:'H1',timestamp:Date.now()});
+    console.log('[DEBUG-PREVIEW] API exit:', JSON.stringify(exitData));
+    // #endregion
 
     return NextResponse.json(
       { spotifyId, previewUrl },
-      { headers: { 'X-Debug-Preview': previewUrl ? 'found' : 'missing' } }
+      { headers: { 'X-Debug-Preview': previewUrl ? 'found' : 'missing', 'X-Debug-PreviewUrl-Len': String(previewUrl?.length ?? 0) } }
     )
   } catch (err) {
     console.error('[enrich-track-spotify]', err)

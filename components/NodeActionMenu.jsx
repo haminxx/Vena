@@ -1,10 +1,12 @@
 'use client'
 
+import { useRef, useEffect } from 'react'
 import { Play, Bookmark, Network, Info } from 'lucide-react'
 
 /**
  * Fixed-size (300px) action menu. Top row: Play, Save. Bottom: Expand, About.
  * Uses Html without transform for fixed pixel size regardless of zoom.
+ * Renders a hidden audio element when previewUrl exists; Play button triggers it directly (user gesture).
  */
 export default function NodeActionMenu({
   onPlay,
@@ -13,10 +15,28 @@ export default function NodeActionMenu({
   onSave,
   onClose,
   hasPreview = false,
+  previewUrl = null,
   isFetchingPreview = false,
   previewUnavailable = false,
   isSaved = false,
 }) {
+  const audioRef = useRef(null)
+
+  useEffect(() => {
+    if (audioRef.current && previewUrl) {
+      audioRef.current.src = previewUrl
+    }
+  }, [previewUrl])
+
+  const handlePlayClick = () => {
+    if (hasPreview && previewUrl && audioRef.current) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play().catch((e) => console.error('Play failed:', e))
+    } else {
+      onPlay?.()
+    }
+  }
+
   const playTooltip = hasPreview
     ? 'Play 30s preview'
     : isFetchingPreview
@@ -31,10 +51,12 @@ export default function NodeActionMenu({
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
+      {/* Hidden audio - play() called directly from click (preserves user gesture) */}
+      {previewUrl && <audio ref={audioRef} src={previewUrl} preload="metadata" />}
       {/* Top row: Play (primary) | Save (icon) */}
       <div className="flex items-center gap-2 px-4 py-3">
         <button
-          onClick={() => onPlay?.()}
+          onClick={handlePlayClick}
           disabled={!hasPreview}
           className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${
             hasPreview

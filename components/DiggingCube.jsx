@@ -144,6 +144,7 @@ function Scene({
                       onSave={() => addSavedTrack(track, isSaved)}
                       onClose={onClose}
                       hasPreview={!!track?.previewUrl}
+                      previewUrl={track?.previewUrl ?? null}
                       isFetchingPreview={previewFetchingFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
                       previewUnavailable={previewUnavailableFor === (track?.id ?? track?.videoId ?? track?.spotifyId)}
                       isSaved={isSaved}
@@ -293,6 +294,11 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
     const track = nodes.find(
       (n) => (n.id ?? n.videoId ?? n.spotifyId) === selectedNodeId
     )
+    // #region agent log
+    const artistVal = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
+    const trackNameVal = track?.title ?? ''
+    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:prefetchEffect',message:'Effect run',data:{selectedNodeId,hasTrack:!!track,hasPreviewUrl:!!track?.previewUrl,artist:artistVal?.slice(0,20),trackName:trackNameVal?.slice(0,20),hasLookup:!!(track?.spotifyId||artistVal||trackNameVal)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!track?.previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
       const trackName = track?.title ?? ''
@@ -301,12 +307,20 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
         const trackKey = track?.id ?? track?.videoId ?? track?.spotifyId
         setPreviewFetchingFor(selectedNodeId)
         setPreviewUnavailableFor(null)
+        // #region agent log
+        fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:fetchStart',message:'Prefetch started',data:{trackKey},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         const params = new URLSearchParams()
         if (track?.spotifyId) params.set('spotifyId', track.spotifyId)
         else { params.set('artist', artist); params.set('track', trackName) }
-        fetch(`/api/enrich-track-spotify?${params}`)
+        const ac = new AbortController()
+        const timeoutId = setTimeout(() => ac.abort(), 15000)
+        fetch(`/api/enrich-track-spotify?${params}`, { signal: ac.signal })
           .then((r) => r.json())
           .then((data) => {
+            // #region agent log
+            fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:fetchComplete',message:'Prefetch completed',data:{previewUrl:!!data?.previewUrl,spotifyId:!!data?.spotifyId},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
             if (data?.previewUrl || data?.spotifyId) {
               setNodes((prev) =>
                 prev.map((n) =>
@@ -320,8 +334,20 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
               setPreviewUnavailableFor(trackKey)
             }
           })
-          .catch(() => setPreviewUnavailableFor(trackKey))
-          .finally(() => setPreviewFetchingFor(null))
+          .catch((err) => {
+            // #region agent log
+            fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:fetchError',message:'Prefetch error',data:{err:String(err?.message||err)},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            setPreviewUnavailableFor(trackKey)
+          })
+          .finally(() => {
+            clearTimeout(timeoutId)
+            setPreviewFetchingFor(null)
+          })
+        return () => {
+          ac.abort()
+          clearTimeout(timeoutId)
+        }
       } else {
         setPreviewUnavailableFor(track?.id ?? track?.videoId ?? track?.spotifyId)
       }
@@ -402,6 +428,9 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
   }, [onSelectNode, selectedNodeId])
 
   const handlePlay = useCallback(async (track) => {
+    // #region agent log
+    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:handlePlay',message:'Play clicked',data:{hasPreviewUrl:!!track?.previewUrl,trackTitle:track?.title?.slice(0,20)},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     let previewUrl = track?.previewUrl
     if (!previewUrl) {
       const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
@@ -412,7 +441,10 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           const params = new URLSearchParams()
           if (track?.spotifyId) params.set('spotifyId', track.spotifyId)
           else { params.set('artist', artist); params.set('track', trackName) }
-          const res = await fetch(`/api/enrich-track-spotify?${params}`)
+          const ac = new AbortController()
+          const t = setTimeout(() => ac.abort(), 15000)
+          const res = await fetch(`/api/enrich-track-spotify?${params}`, { signal: ac.signal })
+          clearTimeout(t)
           const data = await res.json()
           previewUrl = data?.previewUrl ?? null
           if (previewUrl || data?.spotifyId) {
@@ -428,6 +460,9 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
         } catch (_) { /* ignore */ }
       }
     }
+    // #region agent log
+    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DiggingCube:handlePlayEnd',message:'Before play()',data:{willPlay:!!previewUrl,urlLen:previewUrl?.length},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (previewUrl) play(previewUrl)
   }, [play])
 
