@@ -111,7 +111,7 @@ function Scene({
       {nodes.map((track) => {
         const pos = safePosition(track.position)
         const trackKey = track?.id ?? track?.videoId ?? track?.spotifyId
-        const isMenuOpen = selectedNodeId === track.id || selectedNodeId === track?.videoId || selectedNodeId === track?.spotifyId
+        const isMenuOpen = !!selectedNodeId && (selectedNodeId === track.id || selectedNodeId === track?.videoId || selectedNodeId === track?.spotifyId)
         const isCardOpen = showCardTrackId === trackKey
         const isSaved = savedTracks.some((t) => (t.id ?? t.spotifyId) === (track?.id ?? track?.spotifyId))
         return (
