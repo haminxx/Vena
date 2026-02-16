@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Bookmark, Music, Youtube } from 'lucide-react'
+import { Bookmark, Headphones, Music, Youtube } from 'lucide-react'
 import { useBrowserState } from '@/context/BrowserState'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -14,9 +14,15 @@ function getSpotifyUrl(track) {
 }
 
 function getYouTubeUrl(track) {
-  const id = track?.videoId
-  if (!id) return null
-  return `https://www.youtube.com/watch?v=${id}`
+  const videoId = track?.videoId
+  if (!videoId) return null
+  return `https://www.youtube.com/watch?v=${videoId}`
+}
+
+function getYouTubeMusicUrl(track) {
+  const videoId = track?.videoId
+  if (!videoId) return null
+  return `https://music.youtube.com/watch?v=${videoId}`
 }
 
 export default function TabSavedMenu({ dark = false }) {
@@ -77,6 +83,7 @@ export default function TabSavedMenu({ dark = false }) {
                   const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
                   const spotifyUrl = getSpotifyUrl(track)
                   const youtubeUrl = getYouTubeUrl(track)
+                  const youtubeMusicUrl = getYouTubeMusicUrl(track)
                   return (
                     <li
                       key={track?.id ?? track?.spotifyId ?? name}
@@ -89,18 +96,6 @@ export default function TabSavedMenu({ dark = false }) {
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0 opacity-70 group-hover:opacity-100">
-                        {spotifyUrl && (
-                          <a
-                            href={spotifyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`p-1.5 rounded ${hoverClass} ${mutedClass} hover:text-green-500`}
-                            title="Open in Spotify"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Music className="w-4 h-4" />
-                          </a>
-                        )}
                         {youtubeUrl && (
                           <a
                             href={youtubeUrl}
@@ -111,6 +106,30 @@ export default function TabSavedMenu({ dark = false }) {
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Youtube className="w-4 h-4" />
+                          </a>
+                        )}
+                        {youtubeMusicUrl && (
+                          <a
+                            href={youtubeMusicUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`p-1.5 rounded ${hoverClass} ${mutedClass} hover:text-red-400`}
+                            title="Open in YouTube Music"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Headphones className="w-4 h-4" />
+                          </a>
+                        )}
+                        {spotifyUrl && (
+                          <a
+                            href={spotifyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`p-1.5 rounded ${hoverClass} ${mutedClass} hover:text-green-500`}
+                            title="Open in Spotify"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Music className="w-4 h-4" />
                           </a>
                         )}
                       </div>

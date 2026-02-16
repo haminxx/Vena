@@ -38,27 +38,62 @@ export default function ArtistCard({ track, onClose }) {
 
   useEffect(() => {
     const artistId = track?.artistId
-    if (!artistId || typeof artistId !== 'string') {
-      setGenres([])
-      setTopTracks([])
-      setArtistImageLarge(null)
-      return
+    const artistName = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
+    const trackTitle = track?.title ?? ''
+
+    const fetchByArtistId = () => {
+      setLoading(true)
+      fetch(`/api/artist-details?artistId=${encodeURIComponent(artistId)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          setGenres(d.genres ?? [])
+          setTopTracks(d.topTracks ?? [])
+          setArtistImageLarge(d.imageLarge ?? d.image ?? null)
+        })
+        .catch(() => {
+          setGenres([])
+          setTopTracks([])
+          setArtistImageLarge(null)
+        })
+        .finally(() => setLoading(false))
     }
-    setLoading(true)
-    fetch(`/api/artist-details?artistId=${encodeURIComponent(artistId)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setGenres(d.genres ?? [])
-        setTopTracks(d.topTracks ?? [])
-        setArtistImageLarge(d.imageLarge ?? d.image ?? null)
-      })
-      .catch(() => {
+
+    const fetchBySearch = () => {
+      if (!artistName && !trackTitle) {
         setGenres([])
         setTopTracks([])
         setArtistImageLarge(null)
-      })
-      .finally(() => setLoading(false))
-  }, [track?.artistId])
+        return
+      }
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (artistName) params.set('artist', artistName)
+      if (trackTitle) params.set('track', trackTitle)
+      fetch(`/api/artist-by-search?${params}`)
+        .then((r) => r.json())
+        .then((d) => {
+          setGenres(d.genres ?? [])
+          setTopTracks(d.topTracks ?? [])
+          setArtistImageLarge(d.imageLarge ?? d.image ?? null)
+        })
+        .catch(() => {
+          setGenres([])
+          setTopTracks([])
+          setArtistImageLarge(null)
+        })
+        .finally(() => setLoading(false))
+    }
+
+    if (artistId && typeof artistId === 'string') {
+      fetchByArtistId()
+    } else if (artistName || trackTitle) {
+      fetchBySearch()
+    } else {
+      setGenres([])
+      setTopTracks([])
+      setArtistImageLarge(null)
+    }
+  }, [track?.id, track?.artistId, track?.artist, track?.title])
 
   const handlePlay = (url) => {
     play(url)
