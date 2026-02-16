@@ -55,9 +55,7 @@ export default function BrowserLayout() {
     setLoading(true)
     setError(null)
     try {
-      const body = selectedItem?.spotifyId && selectedItem?.type === 'track'
-        ? { spotifyId: selectedItem.spotifyId }
-        : { search: q }
+      const body = { search: (selectedItem?.query ?? q).trim() }
       const res = await fetch('/api/resolve-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

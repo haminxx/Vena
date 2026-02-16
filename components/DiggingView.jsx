@@ -106,13 +106,8 @@ export default function DiggingView({
     setLoading(true)
     setError(null)
     try {
-      let body
-      if (selectedItem?.spotifyId && selectedItem?.type === 'track') {
-        body = { spotifyId: selectedItem.spotifyId }
-      } else {
-        const { cleanQuery, filters } = parseSearchMetadata(q)
-        body = { search: cleanQuery || q, filters: Object.keys(filters || {}).length ? filters : undefined }
-      }
+      const { cleanQuery, filters } = parseSearchMetadata((selectedItem?.query ?? q).trim())
+      const body = { search: cleanQuery || (selectedItem?.query ?? q).trim(), filters: Object.keys(filters || {}).length ? filters : undefined }
       const res = await fetch('/api/resolve-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

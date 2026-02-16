@@ -124,27 +124,37 @@ export async function POST(request) {
 
     if (!spotifyTrack) {
       const firstYt = Array.isArray(ytResults) ? ytResults[0] : null
-      return NextResponse.json(
-        {
-          error: 'No matching track found on Spotify',
-          youtube_metadata: {
-            title,
-            artist,
-            videoId,
-            thumbnail: firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? null,
-            related: (ytResults?.slice(1, 6) ?? []).map((r) => {
-              const ar = r.artist ?? r.artists?.[0] ?? r.author
-              return {
-                videoId: r.videoId ?? r.id,
-                title: r.title ?? r.name,
-                artist: toArtistStr(ar),
-                thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
-              }
-            }),
-          },
-        },
-        { status: 404 }
-      )
+      const fallbackThumb = firstYt?.thumbnail ?? firstYt?.thumbnails?.[0]?.url ?? (videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null)
+      const youtube_metadata = {
+        title,
+        artist,
+        videoId,
+        thumbnail: fallbackThumb,
+        artistImageLarge: fallbackThumb,
+        artistImageSmall: fallbackThumb,
+        albumImage: fallbackThumb,
+        albumImageMedium: fallbackThumb,
+        albumImageLowRes: fallbackThumb,
+        spotifyId: null,
+        artistId: null,
+        previewUrl: null,
+        audioFeatures: null,
+        related: (ytResults?.slice(1, 6) ?? []).map((r) => {
+          const ar = r.artist ?? r.artists?.[0] ?? r.author
+          return {
+            videoId: r.videoId ?? r.id,
+            title: r.title ?? r.name,
+            artist: toArtistStr(ar),
+            thumbnail: r.thumbnail ?? r.thumbnails?.[0]?.url ?? (r.videoId ? `https://img.youtube.com/vi/${r.videoId}/mqdefault.jpg` : null),
+          }
+        }),
+      }
+      return NextResponse.json({
+        youtube_metadata,
+        spotify_preview_url: null,
+        spotify_analysis: null,
+        audio_features: null,
+      })
     }
 
     const spotifyId = spotifyTrack.id
