@@ -1,27 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Play, X } from 'lucide-react'
+import { Play, X, ExternalLink } from 'lucide-react'
 import { useAudioPlayer } from '@/context/AudioPlayerContext'
 import { useMoodBackground } from '@/context/MoodBackgroundContext'
 
 /**
- * Artist Post Card - glassmorphism style, appears when a node is clicked.
- * Uses AudioPlayerContext singleton for reliable playback.
- * Scroll fix: overscroll-contain, onPointerDown stopPropagation.
+ * Artist Post Card - YouTube-based, appears when a node is clicked.
+ * Uses artist-youtube API for artist info and popular/related tracks.
  */
 export default function ArtistCard({ track, onClose }) {
   const { play, stop, playingUrl } = useAudioPlayer()
   const { setPlayingTrack } = useMoodBackground()
-  const [genres, setGenres] = useState([])
-  const [topTracks, setTopTracks] = useState([])
+  const [popularTracks, setPopularTracks] = useState([])
   const [loading, setLoading] = useState(false)
   const [artistImageLarge, setArtistImageLarge] = useState(null)
+  const [artistNameFromApi, setArtistNameFromApi] = useState('')
 
-  const artistName = typeof track?.artist === 'string' ? track.artist : (track?.artist?.name ?? '')
+  const artistName = artistNameFromApi || (typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? '')
   const avatarUrl = artistImageLarge ?? track?.artistImageLarge ?? track?.artistImage ?? track?.image ?? `https://i.pravatar.cc/80?u=${track?.id}`
 
-  // Reset: stop any playing audio when opening a new card
   useEffect(() => {
     stop()
     setPlayingTrack(null)
@@ -31,82 +29,53 @@ export default function ArtistCard({ track, onClose }) {
     }
   }, [track?.id, stop, setPlayingTrack])
 
-  // Clear playing mood when audio stops
   useEffect(() => {
     if (!playingUrl) setPlayingTrack(null)
   }, [playingUrl, setPlayingTrack])
 
   useEffect(() => {
-    const artistId = track?.artistId
-    const artistName = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
+    const videoId = track?.videoId
+    const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
     const trackTitle = track?.title ?? ''
 
-    const fetchByArtistId = () => {
-      setLoading(true)
-      fetch(`/api/artist-details?artistId=${encodeURIComponent(artistId)}`)
-        .then((r) => r.json())
-        .then((d) => {
-          setGenres(d.genres ?? [])
-          setTopTracks(d.topTracks ?? [])
-          setArtistImageLarge(d.imageLarge ?? d.image ?? null)
-        })
-        .catch(() => {
-          setGenres([])
-          setTopTracks([])
-          setArtistImageLarge(null)
-        })
-        .finally(() => setLoading(false))
-    }
-
-    const fetchBySearch = () => {
-      if (!artistName && !trackTitle) {
-        setGenres([])
-        setTopTracks([])
-        setArtistImageLarge(null)
-        return
-      }
-      setLoading(true)
-      const params = new URLSearchParams()
-      if (artistName) params.set('artist', artistName)
-      if (trackTitle) params.set('track', trackTitle)
-      fetch(`/api/artist-by-search?${params}`)
-        .then((r) => r.json())
-        .then((d) => {
-          setGenres(d.genres ?? [])
-          setTopTracks(d.topTracks ?? [])
-          setArtistImageLarge(d.imageLarge ?? d.image ?? null)
-        })
-        .catch(() => {
-          setGenres([])
-          setTopTracks([])
-          setArtistImageLarge(null)
-        })
-        .finally(() => setLoading(false))
-    }
-
-    if (artistId && typeof artistId === 'string') {
-      fetchByArtistId()
-    } else if (artistName || trackTitle) {
-      fetchBySearch()
-    } else {
-      setGenres([])
-      setTopTracks([])
+    if (!videoId && !artist && !trackTitle) {
+      setPopularTracks([])
       setArtistImageLarge(null)
+      setArtistNameFromApi('')
+      return
     }
-  }, [track?.id, track?.artistId, track?.artist, track?.title])
 
-  const handlePlay = (url) => {
-    play(url)
-    if (url) {
-      setPlayingTrack({ ...track, genres })
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (videoId) params.set('videoId', videoId)
+    if (artist) params.set('artist', artist)
+    if (trackTitle) params.set('track', trackTitle)
+
+    fetch(`/api/artist-youtube?${params}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setPopularTracks(d.popularTracks ?? [])
+        setArtistImageLarge(d.imageLarge ?? d.image ?? null)
+        setArtistNameFromApi(d.artistName ?? '')
+      })
+      .catch(() => {
+        setPopularTracks([])
+        setArtistImageLarge(null)
+        setArtistNameFromApi('')
+      })
+      .finally(() => setLoading(false))
+  }, [track?.id, track?.videoId, track?.artist, track?.title])
+
+  const handlePlay = (item) => {
+    if (item?.preview) {
+      play(item.preview)
+      setPlayingTrack({ ...track })
+    } else if (item?.videoId) {
+      window.open(`https://music.youtube.com/watch?v=${item.videoId}`, '_blank', 'noopener,noreferrer')
     }
   }
 
-  const displayTracks = topTracks.length > 0 ? topTracks : (track?.topTracks ?? []).slice(0, 5).map((t) => ({
-    id: t.id ?? t.name,
-    name: t.name ?? t.title,
-    preview: t.preview ?? t.previewUrl,
-  }))
+  const displayTracks = popularTracks.length > 0 ? popularTracks : (track?.topTracks ?? []).slice(0, 5)
 
   return (
     <div
@@ -126,7 +95,7 @@ export default function ArtistCard({ track, onClose }) {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Header: Avatar + Artist Name + Genre Chips */}
+        {/* Header: Avatar + Artist Name */}
         <div className="flex items-start gap-3 mb-4">
           <img
             src={avatarUrl}
@@ -137,29 +106,18 @@ export default function ArtistCard({ track, onClose }) {
             <p className="font-bold text-gray-900 truncate text-base">{artistName}</p>
             {loading ? (
               <p className="text-xs text-gray-400 mt-1">Loading...</p>
-            ) : genres.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {genres.slice(0, 5).map((g, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/80 text-gray-700"
-                  >
-                    {g}
-                  </span>
-                ))}
-              </div>
             ) : (
-              <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/60 text-gray-500 italic">
-                Genre Undefined
+              <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200/60 text-gray-500">
+                YouTube Music
               </span>
             )}
           </div>
         </div>
 
-        {/* Popular Tracks Section - scrollable */}
+        {/* Popular / Related Tracks */}
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Popular Tracks
+            Popular & Related Tracks
           </p>
           <ul
             className="space-y-1 max-h-[150px] overflow-y-auto overscroll-contain pr-1"
@@ -168,23 +126,21 @@ export default function ArtistCard({ track, onClose }) {
             {displayTracks.length > 0 ? (
               displayTracks.map((t, i) => (
                 <li
-                  key={t.id ?? i}
+                  key={t.id ?? t.videoId ?? i}
                   className="flex items-center justify-between gap-2 py-2 px-2 rounded-lg hover:bg-white/50 transition-colors group"
                 >
-                  <span className="text-sm text-gray-800 truncate flex-1">{t.name}</span>
+                  <span className="text-sm text-gray-800 truncate flex-1">{t.name ?? t.title}</span>
                   <button
-                    onClick={() => handlePlay(t.preview)}
-                    disabled={!t.preview}
-                    className={`p-2 rounded-full shrink-0 transition-colors ${
-                      t.preview
-                        ? playingUrl === t.preview
-                          ? 'text-blue-600 bg-blue-100'
-                          : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
-                        : 'text-gray-300 cursor-not-allowed'
-                    }`}
-                    aria-label={t.preview ? 'Play' : 'No preview'}
+                    onClick={() => handlePlay(t)}
+                    className="p-2 rounded-full shrink-0 transition-colors text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                    aria-label={t.videoId ? 'Open in YouTube Music' : 'No link'}
+                    title={t.videoId ? 'Open in YouTube Music' : ''}
                   >
-                    <Play className={`w-4 h-4 ${playingUrl === t.preview ? 'fill-current' : ''}`} />
+                    {t.videoId ? (
+                      <ExternalLink className="w-4 h-4" />
+                    ) : (
+                      <Play className={`w-4 h-4 ${playingUrl === t.preview ? 'fill-current text-blue-600' : 'text-gray-300'}`} />
+                    )}
                   </button>
                 </li>
               ))

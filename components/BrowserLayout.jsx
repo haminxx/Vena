@@ -195,7 +195,7 @@ export default function BrowserLayout() {
   const isDark = theme === 'dark'
   const chromeBg = isDark ? 'bg-gray-800' : 'bg-chrome-gray'
   const chromeTabInactive = isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-300 text-gray-600 hover:bg-gray-400/50'
-  const chromeTabActive = isDark ? 'bg-white text-black rounded-t-lg border-t-2 border-blue-500' : 'bg-white text-black rounded-t-lg border-t-2 border-blue-500'
+  const chromeTabActive = isDark ? 'bg-white text-black rounded-t-lg' : 'bg-white text-black rounded-t-lg'
   const toolbarBg = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
   const contentBg = isDark ? 'bg-gray-950' : 'bg-white'
   const inputBg = isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'

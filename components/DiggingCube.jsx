@@ -150,7 +150,8 @@ function Scene({
                   transform
                   position={[0, NODE_RADIUS + 0.2, 0]}
                   center
-                  pointerEvents="none"
+                  pointerEvents="auto"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <div className="pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
                     <ArtistCard track={track} onClose={() => onClose()} />
@@ -177,6 +178,23 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
   })
   const saveTrackToTab = useAppStore((s) => s.saveTrackToTab)
   const { setHoverTrack, setAlbumColorFromImage } = useMoodBackground()
+
+  const handleSaveTrack = useCallback(async (track) => {
+    let enriched = { ...track }
+    if (!enriched.spotifyId) {
+      const artist = typeof track?.artist === 'string' ? track.artist : track?.artist?.name ?? ''
+      const trackName = track?.title ?? ''
+      if (artist || trackName) {
+        try {
+          const params = new URLSearchParams({ artist, track: trackName })
+          const res = await fetch(`/api/enrich-track-spotify?${params}`)
+          const data = await res.json()
+          if (data?.spotifyId) enriched = { ...enriched, spotifyId: data.spotifyId }
+        } catch (_) { /* ignore */ }
+      }
+    }
+    saveTrackToTab(tabId, enriched)
+  }, [tabId, saveTrackToTab])
   const { play } = useAudioPlayer()
   const setDiggingState = useAppStore((s) => s.setDiggingState)
 
@@ -396,7 +414,7 @@ export default function DiggingCube({ dark = false, tabId, initialTrack, persist
           activeNodeId={activeNodeId}
           lastTriggerTime={lastTriggerTime}
           savedTracks={savedTracks}
-          addSavedTrack={(track) => saveTrackToTab(tabId, track)}
+          addSavedTrack={handleSaveTrack}
         />
       </Canvas>
 
