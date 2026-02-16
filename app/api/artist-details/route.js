@@ -48,10 +48,13 @@ export async function GET(request) {
     const topTracksData = topTracksRes.ok ? await topTracksRes.json() : { tracks: [] }
 
     const genres = artist?.genres ?? []
-    const topTracks = (topTracksData.tracks ?? []).slice(0, 5).map((t) => ({
+    const topTracks = (topTracksData.tracks ?? []).slice(0, 8).map((t) => ({
       id: t.id,
+      spotifyId: t.id,
       name: t.name,
       preview: t.preview_url,
+      previewUrl: t.preview_url ?? null,
+      artist: t.artists?.[0]?.name ?? '',
     }))
 
     const imgs = artist?.images ?? []
@@ -59,6 +62,8 @@ export async function GET(request) {
     const imageSmall = imgs[2]?.url ?? imgs[1]?.url ?? imgs[0]?.url ?? null
 
     return NextResponse.json({
+      artistName: artist?.name ?? '',
+      artistId,
       genres,
       topTracks,
       image: imageLarge,

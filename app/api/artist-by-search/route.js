@@ -52,12 +52,50 @@ export async function GET(request) {
     }
 
     const searchData = await searchRes.json()
-    const tracks = searchData.tracks?.items ?? []
-    const first = tracks[0]
+    const items = searchData.tracks?.items ?? []
+
+    const normalize = (s) =>
+      (s || '')
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+    const matches = (ytTitle, ytArtist, spName, spArtist) => {
+      const nyt = normalize(ytTitle)
+      const nsp = normalize(spName)
+      const ayt = normalize(ytArtist)
+      const asp = normalize(spArtist)
+      if (!nyt || !nsp) return false
+      const titleWords = nyt.split(' ').filter((w) => w.length > 1)
+      const titleMatch =
+        nyt === nsp ||
+        nyt.includes(nsp) ||
+        nsp.includes(nyt) ||
+        (titleWords.length > 0 && titleWords.every((w) => nsp.includes(w)))
+      const artistMatch = !ayt || !asp || ayt === asp || ayt.includes(asp) || asp.includes(ayt)
+      return titleMatch && artistMatch
+    }
+
+    const trackTitle = (track || '').trim()
+    const trackArtist = (artist || '').trim()
+    const best = items.find(
+      (t) =>
+        matches(
+          trackTitle,
+          trackArtist,
+          t?.name ?? '',
+          t?.artists?.[0]?.name ?? ''
+        )
+    )
+    const first = best ?? items[0]
+    if (!first || (trackTitle && trackArtist && !best)) {
+      return NextResponse.json({ genres: [], topTracks: [], imageLarge: null, artistName: '', artistId: null })
+    }
     const artistId = first?.artists?.[0]?.id
 
     if (!artistId) {
-      return NextResponse.json({ genres: [], topTracks: [], imageLarge: null })
+      return NextResponse.json({ genres: [], topTracks: [], imageLarge: null, artistName: '', artistId: null })
     }
 
     const [artistRes, topTracksRes] = await Promise.all([
@@ -69,16 +107,21 @@ export async function GET(request) {
     const topTracksData = topTracksRes.ok ? await topTracksRes.json() : { tracks: [] }
 
     const genres = artistData?.genres ?? []
-    const topTracks = (topTracksData.tracks ?? []).slice(0, 5).map((t) => ({
+    const topTracks = (topTracksData.tracks ?? []).slice(0, 8).map((t) => ({
       id: t.id,
+      spotifyId: t.id,
       name: t.name,
       preview: t.preview_url,
+      previewUrl: t.preview_url ?? null,
+      artist: t.artists?.[0]?.name ?? '',
     }))
 
     const imgs = artistData?.images ?? []
     const imageLarge = imgs[0]?.url ?? null
 
     return NextResponse.json({
+      artistName: artistData?.name ?? artist ?? '',
+      artistId,
       genres,
       topTracks,
       image: imageLarge,
